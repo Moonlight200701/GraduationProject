@@ -27,5 +27,10 @@
         android:orderInCategory="100"
         android:title="Change view"
         app:showAsAction="ifRoom" />
-
+    <item
+        android:id="@+id/action_search"
+        android:icon="@drawable/ic_search"
+        android:title="Search"
+        app:actionViewClass="androidx.appcompat.widget.SearchView"
+        app:showAsAction="ifRoom|collapseActionView"/>
 </menu>
