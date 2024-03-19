@@ -1,0 +1,27 @@
+<resources>
+    <string-array name="movie_category_entries">
+        <item>Popular movies</item>
+        <item>Top rated movies</item>
+        <item>Up coming movies</item>
+        <item>Now playing movies</item>
+    </string-array>
+
+    <string-array name="movie_category_values">
+        <item>popular</item>
+        <item>top_rated</item>
+        <item>upcoming</item>
+        <item>now_playing</item>
+    </string-array>
+
+    <string-array name="movie_sort_entries">
+        <item>None</item>
+        <item>Release Date</item>
+        <item>Rating</item>
+    </string-array>
+
+    <string-array name="movie_sort_values">
+        <item></item>
+        <item>Release Date</item>
+        <item>Rating</item>
+    </string-array>
+</resources>
