@@ -26,7 +26,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Admin"
-            android:textColor="@color/black"
+            android:textColor="@color/teal_200"
             android:textSize="20sp"
             android:textStyle="bold" />
     </LinearLayout>
@@ -43,7 +43,7 @@
             android:gravity="center_vertical"
             android:paddingBottom="10dp"
             android:text="admin@gmail.com.vn"
-            android:textColor="@color/black"
+            android:textColor="@color/teal_200"
             android:drawableLeft="@drawable/ic_email_24" />
 
         <TextView
@@ -53,7 +53,7 @@
             android:gravity="center_vertical"
             android:paddingBottom="10dp"
             android:text="2022/01/01"
-            android:textColor="@color/black"
+            android:textColor="@color/teal_200"
             android:drawableLeft="@drawable/ic_cake_24" />
 
         <TextView
@@ -63,7 +63,7 @@
             android:gravity="center_vertical"
             android:paddingBottom="10dp"
             android:text="Male"
-            android:textColor="@color/black"
+            android:textColor="@color/teal_200"
             android:drawableLeft="@drawable/ic_person_24" />
     </LinearLayout>
 
@@ -85,7 +85,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Reminder"
-            android:textColor="@color/black"
+            android:textColor="@color/teal_200"
             android:textSize="20sp"
             android:textStyle="bold" />
 

@@ -137,6 +137,7 @@ class MovieFragment(
                     }
                 }
             }
+
             R.id.movie_item -> {
                 val position = view.tag as Int
                 val movieItem: Movie = mMovieList[position]
