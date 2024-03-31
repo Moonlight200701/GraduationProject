@@ -11,27 +11,46 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.mockproject.R
 import com.example.mockproject.adapters.MovieAdapter
+import com.example.mockproject.constant.Constant
 import com.example.mockproject.database.DatabaseOpenHelper
 import com.example.mockproject.listenercallback.BadgeListener
+import com.example.mockproject.listenercallback.DetailListener
 import com.example.mockproject.listenercallback.FavouriteListener
+import com.example.mockproject.listenercallback.ReminderListener
+import com.example.mockproject.listenercallback.ToolbarTitleListener
 import com.example.mockproject.model.Movie
 
 class FavoriteFragment(
     private var mDatabaseOpenHelper: DatabaseOpenHelper,
-    private var mMovieFavouriteList: ArrayList<Movie>
+    private var mMovieFavouriteList: ArrayList<Movie>,
 ) : Fragment(),
     View.OnClickListener {
     private lateinit var mMovieRecyclerView: RecyclerView
     private lateinit var mMovieAdapter: MovieAdapter
     private lateinit var mBadgeListener: BadgeListener
     private lateinit var mFavouriteListener: FavouriteListener
+    private lateinit var mToolbarTitleListener: ToolbarTitleListener
+    private lateinit var mDetailListener: DetailListener
+    private lateinit var mReminderListener: ReminderListener
 
+    fun setToolbarTitleListener(toolbarTitleListener: ToolbarTitleListener) {
+        this.mToolbarTitleListener = toolbarTitleListener
+    }
     fun setBadgeListener(badgeListener: BadgeListener) {
         this.mBadgeListener = badgeListener
     }
 
+
     fun setFavouriteListener(favouriteListener: FavouriteListener) {
         this.mFavouriteListener = favouriteListener
+    }
+
+    fun setDetailListener(detailListener: DetailListener) {
+        this.mDetailListener = detailListener
+    }
+
+    fun setRemindListener(reminderListener: ReminderListener) {
+        this.mReminderListener = reminderListener
     }
 
     override fun onCreateView(
@@ -60,12 +79,32 @@ class FavoriteFragment(
                         .show()
                 }
             }
+            R.id.movie_item -> {
+                val position = view.tag as Int
+                val movieItem: Movie = mMovieFavouriteList[position]
+                val bundle = Bundle()
+                bundle.putSerializable(Constant.MOVIE_KEY, movieItem)
+                val detailFragment = DetailFragment(mDatabaseOpenHelper)
+                detailFragment.setToolbarTitleListener(mToolbarTitleListener)
+                detailFragment.setBadgeListener(mBadgeListener)
+                detailFragment.setDetailListener(mDetailListener)
+                detailFragment.setRemindListener(mReminderListener)
+                detailFragment.arguments = bundle
+                requireActivity().supportFragmentManager.beginTransaction().apply {
+                    replace(R.id.frg_favorite, detailFragment, Constant.FRAGMENT_DETAIL_TAG)
+                    addToBackStack(null)  // Add the transaction to the back stack
+                    commit()  // Commit the transaction
+                }
+                mToolbarTitleListener.onUpdateToolbarTitle(movieItem.title)
+            }
         }
     }
 
     override fun onPrepareOptionsMenu(menu: Menu) {
         val item = menu.findItem(R.id.change_view)
+        val item2 = menu.findItem(R.id.action_search)
         item.isVisible = false
+        item2.isVisible = false
     }
 
     private fun loadFavouriteList() {

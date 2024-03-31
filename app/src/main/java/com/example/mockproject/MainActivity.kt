@@ -3,19 +3,25 @@ package com.example.mockproject
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.SearchManager
+import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
+import androidx.appcompat.widget.SearchView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
@@ -40,6 +46,7 @@ import com.example.mockproject.util.BitmapConverter
 import com.example.mockproject.view.*
 import com.google.android.material.navigation.NavigationView
 import com.google.android.material.tabs.TabLayout
+import com.google.firebase.auth.FirebaseAuth
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
@@ -85,6 +92,9 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
     private lateinit var mReminderRecyclerView: RecyclerView
     private lateinit var mReminderAdapter: ReminderAdapter
     private lateinit var mReminderShowAllBtn: Button
+    private lateinit var mLogOutBtn: Button
+
+    private var backPressedCount = 0
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -123,6 +133,9 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         mFavoriteFragment = FavoriteFragment(mDatabaseOpenHelper, mMovieFavouriteList)
         mFavoriteFragment.setBadgeListener(this)
         mFavoriteFragment.setFavouriteListener(this)
+        mFavoriteFragment.setToolbarTitleListener(this) //added a line right here
+        mFavoriteFragment.setDetailListener(this) //add another line right here
+        mFavoriteFragment.setRemindListener(this) //add another line right here
 
         mSettingFragment = SettingFragment()
         mSettingFragment.setSettingListener(this)
@@ -143,6 +156,12 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         mEmailText = mHeaderLayout.findViewById(R.id.tv_mail)
         mGenderText = mHeaderLayout.findViewById(R.id.tv_gender)
         mEditBtn = mHeaderLayout.findViewById(R.id.btn_edit_profile)
+        mLogOutBtn = mHeaderLayout.findViewById(R.id.btn_log_out)
+        mLogOutBtn.setOnClickListener {
+            FirebaseAuth.getInstance().signOut()
+            startActivity(Intent(this, LoginActivity::class.java))
+            finish()
+        }
         mEditBtn.setOnClickListener {
             if (this.mDrawerLayout.isDrawerOpen(GravityCompat.START)) {
                 this.mDrawerLayout.closeDrawer(GravityCompat.START)
@@ -213,12 +232,48 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         if (this.mDrawerLayout.isDrawerOpen(GravityCompat.START)) {
             this.mDrawerLayout.closeDrawer(GravityCompat.START)
         } else {
-            super.onBackPressed()
+            val fragmentManager = supportFragmentManager
+            if (fragmentManager.backStackEntryCount > 0) {
+                fragmentManager.popBackStack()
+            } else {
+                if (backPressedCount < 1) {
+                    backPressedCount++
+                    Toast.makeText(this, "Press back again to exit", Toast.LENGTH_SHORT).show()
+                } else {
+                    super.onBackPressed()
+                }
+            }
         }
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.main, menu)
+        val menuItem = menu?.findItem(R.id.action_search)
+        val searchView = menuItem?.actionView as SearchView
+        val manager = getSystemService(Context.SEARCH_SERVICE) as SearchManager
+        /* cannot cast to search-view because the old one trying to cast an androidx.appcompat.widget.SearchView object to an android.widget.SearchView
+        ---> to fix, need to use the androidx.appcompat.widget.search-view directly instead of casting to androidx.widget.Searchview
+        */
+        searchView.setSearchableInfo(manager.getSearchableInfo(componentName))
+
+        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                searchView.clearFocus()
+                searchView.setQuery("", false)
+                menuItem.collapseActionView()
+                mMovieFragment.updateMovies(query?:"")
+                return true
+            }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                return false
+            }
+
+        })
+
+        Log.d("Finding your choice", "${R.id.action_search}")
+        Log.d("Your searchView be like", "$searchView")
+
         return true
     }
 
@@ -234,15 +289,19 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
                 }
                 mMovieFragment.changeView()
             }
+
             R.id.action_movie -> {
                 mViewPager.currentItem = 0
             }
+
             R.id.action_favorite -> {
                 mViewPager.currentItem = 1
             }
+
             R.id.action_setting -> {
                 mViewPager.currentItem = 2
             }
+
             R.id.action_about -> {
                 mViewPager.currentItem = 3
             }
@@ -489,6 +548,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         notificationManager.createNotificationChannel(channel)
     }
 
+
     private fun checkPermissionDenied(permission: String?): Boolean {
         return ContextCompat.checkSelfPermission(
             this, permission!!
@@ -512,4 +572,5 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
     fun onDeleteReminderEvent(reminderEvent: ReminderEvent) {
         loadReminderList()
     }
+
 }

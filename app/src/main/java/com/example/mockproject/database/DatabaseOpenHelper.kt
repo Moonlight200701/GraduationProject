@@ -6,6 +6,7 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteException
 import android.database.sqlite.SQLiteOpenHelper
+import com.example.mockproject.model.Genre
 import com.example.mockproject.model.Movie
 
 class DatabaseOpenHelper(
@@ -29,9 +30,11 @@ class DatabaseOpenHelper(
         private var MOVIE_FAVORITE = "movie_favorite"
         private var REMINDER_TIME = "movie_reminder_time"
         private var REMINDER_TIME_DISPLAY = "movie_reminder_time_display"
+        private var MOVIE_GENRE_ID = "movie_genre_id"
     }
 
     override fun onCreate(db: SQLiteDatabase) {
+        // SQL statement to create movie table
         val createTableMovie = "CREATE TABLE $MOVIE_TABLE ( " +
                 "$MOVIE_ID INTEGER PRIMARY KEY," +
                 "$MOVIE_TITLE TEXT," +
@@ -41,7 +44,7 @@ class DatabaseOpenHelper(
                 "$MOVIE_IMAGE_POSTER TEXT, " +
                 "$MOVIE_ADULT INTEGER, " +
                 "$MOVIE_FAVORITE INTEGER )"
-
+        // SQL statement to create reminder table
         val createTableReminder = "CREATE TABLE $REMINDER_TABLE ( " +
                 "$MOVIE_ID INTEGER PRIMARY KEY," +
                 "$MOVIE_TITLE TEXT," +
@@ -53,11 +56,12 @@ class DatabaseOpenHelper(
                 "$MOVIE_FAVORITE INTEGER," +
                 "$REMINDER_TIME TEXT," +
                 "$REMINDER_TIME_DISPLAY TEXT)"
-
+        // Execute SQL statements to create tables
         db.execSQL(createTableMovie)
         db.execSQL(createTableReminder)
     }
 
+    // Called when the database needs to be upgraded
     override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
         val dropTableMovie = "DROP TABLE $MOVIE_TABLE"
         val dropTableReminder = "DROP TABLE $REMINDER_TABLE"
@@ -66,6 +70,7 @@ class DatabaseOpenHelper(
         onCreate(db)
     }
 
+    // Method to add a movie to the database
     fun addMovie(movie: Movie): Int {
         val db = this.writableDatabase
         val contentValues = ContentValues()
@@ -86,6 +91,7 @@ class DatabaseOpenHelper(
         return recordCount.toInt()
     }
 
+    // Method to get list of movies from the database
     fun getListMovie(): ArrayList<Movie> {
         val listMovie: ArrayList<Movie> = ArrayList()
         val selectQuery = "SELECT * FROM $MOVIE_TABLE"
@@ -98,8 +104,17 @@ class DatabaseOpenHelper(
             db.execSQL(selectQuery)
             return ArrayList()
         }
+        // Iterate through cursor and add movies to list
         if (cursor.moveToFirst()) {
             do {
+//                val movieId = cursor.getInt(0)
+//                val movieGenres = getGenresForMovie(movieId) // Assuming getGenresForMovie is a method that fetches genres for a given movie ID
+//                val genres = ArrayList<Genre>()
+//                movieGenres.forEach { genreId ->
+//                    // Fetch genre name based on genre ID (You need to implement this logic)
+//                    val genreName = getGenreNameById(genreId) // Assuming getGenreNameById is a method that fetches genre name for a given genre ID
+//                    genres.add(Genre(genreId, genreName))
+//                }
                 movie = Movie(
                     cursor.getInt(0),
                     cursor.getString(1),
@@ -115,6 +130,11 @@ class DatabaseOpenHelper(
         }
         return listMovie
     }
+//
+//    private fun getGenresForMovie(movieId: Int): Any {
+//        val db = this.writableDatabase
+//
+//    }
 
     fun addReminder(movie: Movie): Int {
         val db = this.writableDatabase

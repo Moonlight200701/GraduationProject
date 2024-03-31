@@ -1,5 +1,6 @@
 package com.example.mockproject.util
 
+import android.annotation.SuppressLint
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
@@ -12,6 +13,7 @@ import com.example.mockproject.model.Movie
 
 
 class NotificationUtil {
+    @SuppressLint("ScheduleExactAlarm")
     fun createNotification(movie: Movie, reminderTime: Long, context: Context) {
         val intent = Intent(context, AlarmReceiver::class.java)
         val bundle = Bundle()

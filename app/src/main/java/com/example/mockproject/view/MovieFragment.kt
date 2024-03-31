@@ -4,6 +4,7 @@ import android.content.SharedPreferences
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -211,7 +212,7 @@ class MovieFragment(
                 super.onScrolled(recyclerView, dx, dy)
                 if (isLastItemDisplaying(recyclerView)) {
                     mHandler.postDelayed({
-                        getMovieListFromApi(false, true)
+//                        getMovieListFromApi(false, true)
                     }, 1000)
                 }
             }
@@ -275,12 +276,14 @@ class MovieFragment(
                     mMovieList,
                     mRatePref,
                     mReleaseYearPref,
-                    mSortByPref
-                )
+                    mSortByPref,
+
+                    )
                 if (mCurrentPage < responseBody.totalPages) {
                     val loadMoreItem =
                         Movie(0, "0", "0", 0.0, "0", "0", false, false, "0", "0")
                     mMovieList.add(loadMoreItem)
+                    Log.d("Movie that get by api", mMovieList.toString())
                 }
                 mMovieAdapter.notifyDataSetChanged()
                 if (!isLoadMore && !isRefresh) {
@@ -303,5 +306,32 @@ class MovieFragment(
                 }
             }
         })
+    }
+
+    fun updateMovies(query: String?) {
+        if (query.isNullOrEmpty() || mMovieList.none { it.title.contains(query, true) }) {
+            // If the query is empty or null, show all movies
+            mMovieAdapter.setupMovieBySetting(
+                mMovieList,
+                mRatePref,
+                mReleaseYearPref,
+                mSortByPref,
+            )
+            Toast.makeText(context, "Movies not found", Toast.LENGTH_SHORT).show()
+        } else {
+            mMovieList.filter { it.title.contains(query, ignoreCase = true) }
+            val filteredMovieList = ArrayList<Movie>(mMovieList)
+            filteredMovieList.removeAll { !it.title.equals(query, true) }
+            //add all of the modified list to a new list
+            mMovieAdapter.setupMovieBySetting(
+                filteredMovieList,
+                mRatePref,
+                mReleaseYearPref,
+                mSortByPref,
+            )
+            Toast.makeText(context, "Looking for your movie...", Toast.LENGTH_SHORT).show()
+            Log.d("MovieListAfterRemoving", filteredMovieList.toString())
+            mMovieAdapter.notifyDataSetChanged()
+        }
     }
 }

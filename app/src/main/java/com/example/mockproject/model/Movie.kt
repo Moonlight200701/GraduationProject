@@ -14,4 +14,5 @@ data class Movie(
     var isFavorite: Boolean = false,
     var reminderTime: String = "",
     var reminderTimeDisplay: String = "",
+//    @SerializedName("genres") var genres: List<Genre> = emptyList()
 ) : Serializable

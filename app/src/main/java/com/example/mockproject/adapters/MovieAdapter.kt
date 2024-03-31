@@ -1,5 +1,6 @@
 package com.example.mockproject.adapters
 
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -40,9 +41,10 @@ class MovieAdapter(
     }
 
     fun setupMovieBySetting(
-        movieList: ArrayList<Movie>, rate: Int,
+        movieList: ArrayList<Movie>,
+        rate: Int,
         releaseYear: String,
-        sortBy: String
+        sortBy: String,
     ) {
         movieList.removeAll { it.voteAverage < rate }
 
@@ -63,7 +65,6 @@ class MovieAdapter(
         else if (sortBy == "Rating") {
             movieList.sortByDescending { it.voteAverage }
         }
-        mMovieList = movieList
     }
 
     fun removeItemLoading() {

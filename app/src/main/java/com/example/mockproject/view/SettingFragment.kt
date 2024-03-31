@@ -23,7 +23,9 @@ class SettingFragment : PreferenceFragmentCompat(),
 
     override fun onPrepareOptionsMenu(menu: Menu) {
         val item = menu.findItem(R.id.change_view)
+        val item2 = menu.findItem(R.id.action_search)
         item.isVisible = false
+        item2.isVisible = false
     }
 
     override fun onResume() {

@@ -29,5 +29,10 @@
     </string>
     <string name="attachment_summary_off">Only download attachments when manually requested</string>
     <string name="app_introduce">This application was created to help you update information about the movie that is premiered and can set reminders for your favorite movie.</string>
+    <string name="email_address">Email Address\n</string>
+    <string name="password">Password\n</string>
+    <string name="login">Login\n</string>
+    <string name="register">Register\n</string>
+    <string name="goToLogin">Already have an account? Login</string>
 
 </resources>

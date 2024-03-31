@@ -50,6 +50,7 @@ class ReminderFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fr
         return view
     }
 
+
     override fun onPrepareOptionsMenu(menu: Menu) {
         val item = menu.findItem(R.id.change_view)
         item.isVisible = false
