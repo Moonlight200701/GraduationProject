@@ -1,6 +1,7 @@
 package com.example.mockproject.api
 
 import com.example.mockproject.model.CastCrewList
+import com.example.mockproject.model.MovieDataRecommendList
 import com.example.mockproject.model.MovieList
 import retrofit2.Call
 import retrofit2.http.GET
@@ -20,4 +21,21 @@ interface ApiInterface {
         @Path("movieId") id: Int,
         @Query("api_key") apiKey: String
     ): Call<CastCrewList>
+
+    @GET("3/search/movie")
+    fun searchMovie(
+        @Query("query") query: String,
+        @Query("api_key") apiKey: String,
+        @Query("include_adult") includeAdult: Boolean = false,
+        @Query("language") language: String = "en-US",
+        @Query("page") pageNumber: String
+    ): Call<MovieList>
+
+    @GET("3/movie/{movieCategory}")
+    fun getMovieListRecommendation(
+        @Path("movieCategory") movieCategory: String,
+        @Query("api_key") apiKey: String,
+        @Query("page") pageNumber: String
+    ): Call<MovieDataRecommendList>
+
 }

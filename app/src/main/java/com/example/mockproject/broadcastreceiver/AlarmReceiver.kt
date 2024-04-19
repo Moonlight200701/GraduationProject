@@ -32,9 +32,9 @@ class AlarmReceiver : BroadcastReceiver() {
             val databaseOpenHelper = DatabaseOpenHelper(context, null)
             if (databaseOpenHelper.deleteReminderByMovieId(movieId) > 0) {
                 val notification = NotificationCompat.Builder(context, channelID)
-                    .setSmallIcon(R.drawable.ic_launcher_foreground)
+                    .setSmallIcon(R.drawable.ic_movie_24)
                     .setContentTitle(movieTitle)
-                    .setContentText("Release:$release-Rate:$rate")
+                    .setContentText("It's time to watch the film. Release: $release - Rate: $rate")
                     .build()
                 val manager =
                     context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

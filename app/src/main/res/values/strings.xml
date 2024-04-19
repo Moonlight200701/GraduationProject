@@ -34,5 +34,10 @@
     <string name="login">Login\n</string>
     <string name="register">Register\n</string>
     <string name="goToLogin">Already have an account? Login</string>
+    <string name="change_my_password">Change My Password</string>
+    <string name="your_old_password">Your old password</string>
+    <string name="confirm_new_password">Confirm new password</string>
+    <string name="change">Change</string>
+    <string name="new_password">New password</string>
 
 </resources>

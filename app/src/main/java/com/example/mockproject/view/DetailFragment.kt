@@ -1,27 +1,27 @@
 package com.example.mockproject.view
 
-import android.app.*
-import android.content.Context
-import android.content.Intent
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.View
 import android.view.ViewGroup
-import android.widget.*
+import android.widget.Button
+import android.widget.ImageButton
+import android.widget.ImageView
+import android.widget.TextView
+import android.widget.Toast
 import androidx.annotation.RequiresApi
-
+import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-
 import com.example.mockproject.R
 import com.example.mockproject.adapters.CastAndCrewAdapter
 import com.example.mockproject.api.ApiInterface
 import com.example.mockproject.api.RetrofitClient
-import com.example.mockproject.broadcastreceiver.*
 import com.example.mockproject.constant.APIConstant
 import com.example.mockproject.constant.Constant
 import com.example.mockproject.database.DatabaseOpenHelper
@@ -30,8 +30,13 @@ import com.example.mockproject.listenercallback.BadgeListener
 import com.example.mockproject.listenercallback.DetailListener
 import com.example.mockproject.listenercallback.ReminderListener
 import com.example.mockproject.listenercallback.ToolbarTitleListener
-import com.example.mockproject.model.*
+import com.example.mockproject.model.CastAndCrew
+import com.example.mockproject.model.CastCrewList
+import com.example.mockproject.model.Movie
 import com.example.mockproject.util.NotificationUtil
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.firestore.FirebaseFirestore
 import com.squareup.picasso.Picasso
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
@@ -39,9 +44,7 @@ import org.greenrobot.eventbus.ThreadMode
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-
-import java.util.*
-import kotlin.collections.ArrayList
+import java.util.Calendar
 
 
 class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragment(),
@@ -66,6 +69,9 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
     private lateinit var mDetailListener: DetailListener
     private lateinit var mReminderListener: ReminderListener
 
+    //Firebase
+    private lateinit var fAuth: FirebaseAuth
+
     fun setToolbarTitleListener(toolbarTitleListener: ToolbarTitleListener) {
         this.mToolbarTitleListener = toolbarTitleListener
     }
@@ -84,9 +90,7 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
 
     @RequiresApi(Build.VERSION_CODES.M)
     override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
+        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
         val view: View = inflater.inflate(R.layout.fragment_detail, container, false)
         val bundle = this.arguments
@@ -109,6 +113,7 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
         mReminderTimeText = view.findViewById(R.id.reminder_time_text)
         mOverviewText = view.findViewById(R.id.overview_text)
         mCastRecyclerView = view.findViewById(R.id.cast_and_crew_recyclerview)
+        fAuth = FirebaseAuth.getInstance()
 
         if (mMovie.isFavorite) {
             mFavouriteBtn.setImageResource(R.drawable.ic_star_black_24)
@@ -162,25 +167,48 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
     override fun onClick(view: View) {
         when (view.id) {
             R.id.favourite_img_btn -> {
-                if (mMovie.isFavorite) {
-                    if (mDatabaseOpenHelper.deleteMovie(mMovie.id) > -1) {
-                        mMovie.isFavorite = false
-                        mFavouriteBtn.setImageResource(R.drawable.ic_star_outline_24)
-                        mDetailListener.onUpdateFromDetail(mMovie, false)
-                        mBadgeListener.onUpdateBadgeNumber(false)
+                val user: FirebaseUser? = fAuth.currentUser
+                if (user != null) {
+                    val userId = user.uid
+                    val db = FirebaseFirestore.getInstance()
+                    val favoritesRef =
+                        db.collection("Users").document(userId).collection("Favorites")
+                    if (mMovie.isFavorite) {
+                        mDatabaseOpenHelper.deleteMovie(mMovie.id)
+                        favoritesRef.document(mMovie.id.toString()).delete()
+                            .addOnSuccessListener {
+                                mMovie.isFavorite = false
+                                mFavouriteBtn.setImageResource(R.drawable.ic_star_outline_24)
+                                mDetailListener.onUpdateFromDetail(mMovie, false)
+                                mBadgeListener.onUpdateBadgeNumber(false)
+                                Toast.makeText(context, "Delete successfully", Toast.LENGTH_SHORT)
+                                    .show()
+                            }.addOnFailureListener {
+                                // Handle failure
+                                Toast.makeText(
+                                    context, "Remove Failed ${mMovie.id}", Toast.LENGTH_SHORT
+                                ).show()
+                            }
                     } else {
-                        Toast.makeText(context, "Remove Failed ${mMovie.id}", Toast.LENGTH_SHORT)
-                            .show()
-                    }
-                } else {
-                    if (mDatabaseOpenHelper.addMovie(mMovie) > -1) {
-                        mMovie.isFavorite = true
-                        mFavouriteBtn.setImageResource(R.drawable.ic_star_black_24)
-                        mDetailListener.onUpdateFromDetail(mMovie, true)
-                        mBadgeListener.onUpdateBadgeNumber(true)
-                    } else {
-                        Toast.makeText(context, "Add Failed ${mMovie.id}", Toast.LENGTH_SHORT)
-                            .show()
+                        mDatabaseOpenHelper.addMovie(mMovie)
+                        val favoriteData = hashMapOf(
+                            "id" to mMovie.id,
+                            "title" to mMovie.title,
+                            // Add other movie details here as needed
+                        )
+                        favoritesRef.document(mMovie.id.toString()).set(favoriteData)
+                            .addOnSuccessListener {
+                                mMovie.isFavorite = true
+                                mFavouriteBtn.setImageResource(R.drawable.ic_star_black_24)
+                                mDetailListener.onUpdateFromDetail(mMovie, true)
+                                mBadgeListener.onUpdateBadgeNumber(true)
+                            }.addOnFailureListener {
+                                Toast.makeText(
+                                    context,
+                                    "Add to favorites failed",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
                     }
                 }
             }
@@ -201,12 +229,12 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
 
         retrofitData.enqueue(object : Callback<CastCrewList?> {
             override fun onResponse(
-                call: Call<CastCrewList?>?,
-                response: Response<CastCrewList?>?
+                call: Call<CastCrewList?>?, response: Response<CastCrewList?>?
             ) {
                 val responseBody = response!!.body()
                 mCastAndCrewList.addAll(responseBody!!.castList)
                 mCastAndCrewList.addAll(responseBody.crewList)
+                Log.d("Cast and crew list", mCastAndCrewList.toString())
                 mCastAndCrewAdapter.notifyDataSetChanged()
             }
 
@@ -242,9 +270,7 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
                     if (mDatabaseOpenHelper.updateReminder(mMovie) > 0) {
                         NotificationUtil().cancelNotification(mMovie.id, requireContext())
                         NotificationUtil().createNotification(
-                            mMovie,
-                            reminderTimeInMillis,
-                            requireContext()
+                            mMovie, reminderTimeInMillis, requireContext()
                         )
                         mReminderListener.onLoadReminder()
                     } else {
@@ -255,9 +281,7 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
                         mReminderExisted = true
                         mReminderListener.onLoadReminder()
                         NotificationUtil().createNotification(
-                            mMovie,
-                            reminderTimeInMillis,
-                            requireContext()
+                            mMovie, reminderTimeInMillis, requireContext()
                         )
                     } else {
                         Toast.makeText(context, "Add reminder fail", Toast.LENGTH_SHORT).show()

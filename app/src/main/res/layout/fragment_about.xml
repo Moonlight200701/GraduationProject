@@ -5,11 +5,6 @@
     android:layout_height="match_parent"
     tools:context=".view.AboutFragment">
 
-    <WebView
-        android:visibility="gone"
-        android:id="@+id/about_web"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -18,36 +13,10 @@
         android:orientation="vertical"
         android:visibility="visible">
 
-        <de.hdodenhof.circleimageview.CircleImageView
-            android:layout_width="200dp"
-            android:layout_height="200dp"
-            android:src="@drawable/admin_avatar" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_centerInParent="true"
-            android:text="Hello Friend!"
-            android:textColor="@android:color/holo_green_light"
-            android:textSize="30sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_centerInParent="true"
-            android:text="I'm Developer"
-            android:textColor="@android:color/black"
-            android:textSize="24sp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_centerInParent="true"
-            android:layout_margin="20dp"
-            android:text="@string/app_introduce"
-            android:textColor="@android:color/black"
-            android:textSize="20sp" />
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/list_recyclerview_recommend"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
     </LinearLayout>
 
 </FrameLayout>

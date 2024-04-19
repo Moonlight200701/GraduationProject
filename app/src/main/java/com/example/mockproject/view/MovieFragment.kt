@@ -26,6 +26,9 @@ import com.example.mockproject.database.DatabaseOpenHelper
 import com.example.mockproject.listenercallback.*
 import com.example.mockproject.model.Movie
 import com.example.mockproject.model.MovieList
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.firestore.FirebaseFirestore
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -57,6 +60,9 @@ class MovieFragment(
     private lateinit var mMovieListener: MovieListener
     private lateinit var mDetailListener: DetailListener
     private lateinit var mReminderListener: ReminderListener
+
+    //Firebase
+    private lateinit var fAuth: FirebaseAuth
 
     fun setToolbarTitleListener(toolbarTitleListener: ToolbarTitleListener) {
         this.mToolbarTitleListener = toolbarTitleListener
@@ -90,16 +96,17 @@ class MovieFragment(
         mMovieRecyclerView = rootView.findViewById(R.id.movie_recycle)
         mHandler = Handler(Looper.getMainLooper())
         mMovieListDB = mDatabaseOpenHelper.getListMovie()
+        fAuth = FirebaseAuth.getInstance()
         loadDataBySetting()
         updateMovieList()
         mHandler.postDelayed({
-            getMovieListFromApi(false, false)
+            getMovieListFromApi(false, false, null)
         }, 1000)
 
         mSwipeRefreshLayout.setOnRefreshListener {
             mHandler.postDelayed({
                 updateMovieList()
-                getMovieListFromApi(true, false)
+                getMovieListFromApi(true, false, null)
             }, 1000)
         }
         onLoadMoreListener()
@@ -110,31 +117,64 @@ class MovieFragment(
         when (view.id) {
             R.id.item_list_favourite_image_button -> {
                 val position = view.tag as Int
+                Log.d("MovieTag", view.tag.toString())
                 val movieItem: Movie = mMovieList[position]
-                if (movieItem.isFavorite) {
-                    if (mDatabaseOpenHelper.deleteMovie(movieItem.id) > -1) {
-                        movieItem.isFavorite = false
-                        mMovieAdapter.notifyItemChanged(position)
-//                        mMovieListDB.remove(movieItem)
-//                        mMovieViewModel.movieListDB.value = mMovieListDB
-                        mBadgeListener.onUpdateBadgeNumber(false)
-                        mMovieListener.onUpdateFromMovie(movieItem, false)
+                val user: FirebaseUser? = fAuth.currentUser
+                Log.d("Current User", user.toString())
+                Log.d("Movie Item", movieItem.toString())
+
+                if (user != null) {
+                    val userId = user.uid
+                    val db = FirebaseFirestore.getInstance()
+                    val favoritesRef =
+                        db.collection("Users").document(userId).collection("Favorites")
+                    if (movieItem.isFavorite) {
+                        mDatabaseOpenHelper.deleteMovie(movieItem.id)
+                        favoritesRef.document(movieItem.id.toString()).delete()
+                            .addOnSuccessListener {
+                                // Delete successful
+                                movieItem.isFavorite = false
+                                mMovieAdapter.notifyItemChanged(position)
+                                mMovieListDB.remove(movieItem)
+                                mBadgeListener.onUpdateBadgeNumber(false)
+                                mMovieListener.onUpdateFromMovie(movieItem, false)
+                                Toast.makeText(context, "Remove successfully", Toast.LENGTH_SHORT).show()
+                            }
+                            .addOnFailureListener {
+                                // Handle failure
+                                Toast.makeText(
+                                    context,
+                                    "Remove Failed ${movieItem.id}",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
                     } else {
-                        Toast.makeText(context, "Remove Failed ${movieItem.id}", Toast.LENGTH_SHORT)
-                            .show()
-                    }
-                } else {
-                    if (mDatabaseOpenHelper.addMovie(movieItem) > -1) {
-                        movieItem.isFavorite = true
-                        mMovieAdapter.notifyItemChanged(position)
-//                        mMovieListDB.add(movieItem)
-//                        mMovieViewModel.movieListDB.value = mMovieListDB
-                        mBadgeListener.onUpdateBadgeNumber(true)
-                        mMovieListener.onUpdateFromMovie(movieItem, true)
-                    } else {
-                        Toast.makeText(
-                            context, "Add Failed ${movieItem.id}", Toast.LENGTH_SHORT
-                        ).show()
+                        mDatabaseOpenHelper.addMovie(movieItem)
+                        val favoriteData = hashMapOf(
+                            "id" to movieItem.id,
+                            "title" to movieItem.title,
+//                            "poster path" to movieItem.posterPath,
+//                            "overview" to movieItem.overview,
+
+                            // Add other movie details here as needed
+                        )
+                        favoritesRef.document(movieItem.id.toString()).set(favoriteData)
+                            .addOnSuccessListener {
+                                // Add successful
+                                movieItem.isFavorite = true
+                                mMovieAdapter.notifyItemChanged(position)
+                                mMovieListDB.add(movieItem)
+                                mBadgeListener.onUpdateBadgeNumber(true)
+                                mMovieListener.onUpdateFromMovie(movieItem, true)
+                            }
+                            .addOnFailureListener {
+                                // Handle failure
+                                Toast.makeText(
+                                    context,
+                                    "Add Failed ${movieItem.id}",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
                     }
                 }
             }
@@ -180,7 +220,7 @@ class MovieFragment(
         loadDataBySetting()
         updateMovieList()
         mHandler.postDelayed({
-            getMovieListFromApi(false, false)
+            getMovieListFromApi(false, false, null)
         }, 1000)
     }
 
@@ -212,7 +252,7 @@ class MovieFragment(
                 super.onScrolled(recyclerView, dx, dy)
                 if (isLastItemDisplaying(recyclerView)) {
                     mHandler.postDelayed({
-//                        getMovieListFromApi(false, true)
+                        getMovieListFromApi(false, true, null)
                     }, 1000)
                 }
             }
@@ -230,18 +270,6 @@ class MovieFragment(
         return false
     }
 
-    private fun findMoviePositionById(id: Int): Int {
-        var position = -1
-        val size = mMovieList.size
-        for (index in 0 until size) {
-            if (mMovieList[index].id == id) {
-                position = index
-                break
-            }
-        }
-        return position
-    }
-
     private fun loadDataBySetting() {
         mCategoryPref =
             mSharedPreferences.getString(Constant.PREF_CATEGORY_KEY, "popular").toString()
@@ -250,7 +278,7 @@ class MovieFragment(
         mSortByPref = mSharedPreferences.getString(Constant.PREF_SORT_KEY, "").toString()
     }
 
-    private fun getMovieListFromApi(isRefresh: Boolean, isLoadMore: Boolean) {
+    private fun getMovieListFromApi(isRefresh: Boolean, isLoadMore: Boolean, query: String?) {
         if (isLoadMore) {
             mCurrentPage += 1
         } else {
@@ -261,34 +289,52 @@ class MovieFragment(
 
         val retrofit: ApiInterface =
             RetrofitClient().getRetrofitInstance().create(ApiInterface::class.java)
-        val retrofitData =
+
+        // the API call to include the search query parameter if provided
+        val retrofitData = if (!query.isNullOrEmpty()) {
+            retrofit.searchMovie(
+                query,
+                APIConstant.API_KEY,
+                includeAdult = false,
+                language = "en-US",
+                pageNumber = "$mCurrentPage"
+            )
+        } else {
             retrofit.getMovieList(mCategoryPref, APIConstant.API_KEY, "$mCurrentPage")
+        }
+
         retrofitData.enqueue(object : Callback<MovieList?> {
             override fun onResponse(call: Call<MovieList?>?, response: Response<MovieList?>?) {
                 mMovieAdapter.removeItemLoading()
                 val responseBody = response!!.body()
                 val movieResultList = responseBody?.results as ArrayList<Movie>
-//                mMovieViewModel.movieList.value = movieResultList
+                // Clear the current list if not loading more
+                if (!isLoadMore) {
+                    mMovieList.clear()
+                }
                 mMovieList.addAll(movieResultList)
                 mMovieAdapter.setupMovieFavorite(mMovieListDB)
-
                 mMovieAdapter.setupMovieBySetting(
                     mMovieList,
                     mRatePref,
                     mReleaseYearPref,
-                    mSortByPref,
+                    mSortByPref
+                )
 
-                    )
+                // Add load more item if necessary
                 if (mCurrentPage < responseBody.totalPages) {
-                    val loadMoreItem =
-                        Movie(0, "0", "0", 0.0, "0", "0", false, false, "0", "0")
+                    val loadMoreItem = Movie(0, "0", "0", 0.0, "0", "0", false, false, "0", "0")
                     mMovieList.add(loadMoreItem)
                     Log.d("Movie that get by api", mMovieList.toString())
                 }
+
+                // Notify adapter of data change
                 mMovieAdapter.notifyDataSetChanged()
+
                 if (!isLoadMore && !isRefresh) {
                     mProgressBarLayout.visibility = View.GONE
                 }
+
                 if (isRefresh) {
                     mSwipeRefreshLayout.isRefreshing = false
                 }
@@ -309,6 +355,7 @@ class MovieFragment(
     }
 
     fun updateMovies(query: String?) {
+        getMovieListFromApi(true, false, null)
         if (query.isNullOrEmpty() || mMovieList.none { it.title.contains(query, true) }) {
             // If the query is empty or null, show all movies
             mMovieAdapter.setupMovieBySetting(
@@ -319,19 +366,11 @@ class MovieFragment(
             )
             Toast.makeText(context, "Movies not found", Toast.LENGTH_SHORT).show()
         } else {
-            mMovieList.filter { it.title.contains(query, ignoreCase = true) }
-            val filteredMovieList = ArrayList<Movie>(mMovieList)
-            filteredMovieList.removeAll { !it.title.equals(query, true) }
-            //add all of the modified list to a new list
-            mMovieAdapter.setupMovieBySetting(
-                filteredMovieList,
-                mRatePref,
-                mReleaseYearPref,
-                mSortByPref,
-            )
+            mMovieList.clear()
+            mProgressBarLayout.visibility = View.VISIBLE
+            getMovieListFromApi(false, false, query)
             Toast.makeText(context, "Looking for your movie...", Toast.LENGTH_SHORT).show()
-            Log.d("MovieListAfterRemoving", filteredMovieList.toString())
-            mMovieAdapter.notifyDataSetChanged()
+//            Log.d("MovieListAfterRemoving", filteredMovieList.toString())
         }
     }
 }

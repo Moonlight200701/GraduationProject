@@ -6,7 +6,7 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteException
 import android.database.sqlite.SQLiteOpenHelper
-import com.example.mockproject.model.Genre
+import android.util.Log
 import com.example.mockproject.model.Movie
 
 class DatabaseOpenHelper(
@@ -80,6 +80,7 @@ class DatabaseOpenHelper(
         contentValues.put(MOVIE_RATING, movie.voteAverage)
         contentValues.put(MOVIE_DATE, movie.releaseDate)
         contentValues.put(MOVIE_IMAGE_POSTER, movie.posterPath)
+        Log.d("Content Value", contentValues.toString())
         if (movie.adult) {
             contentValues.put(MOVIE_ADULT, 0)
         } else {
@@ -107,14 +108,6 @@ class DatabaseOpenHelper(
         // Iterate through cursor and add movies to list
         if (cursor.moveToFirst()) {
             do {
-//                val movieId = cursor.getInt(0)
-//                val movieGenres = getGenresForMovie(movieId) // Assuming getGenresForMovie is a method that fetches genres for a given movie ID
-//                val genres = ArrayList<Genre>()
-//                movieGenres.forEach { genreId ->
-//                    // Fetch genre name based on genre ID (You need to implement this logic)
-//                    val genreName = getGenreNameById(genreId) // Assuming getGenreNameById is a method that fetches genre name for a given genre ID
-//                    genres.add(Genre(genreId, genreName))
-//                }
                 movie = Movie(
                     cursor.getInt(0),
                     cursor.getString(1),

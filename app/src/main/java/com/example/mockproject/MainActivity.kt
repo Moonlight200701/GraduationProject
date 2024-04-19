@@ -19,12 +19,12 @@ import android.view.View
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
-import androidx.appcompat.widget.SearchView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
@@ -40,19 +40,36 @@ import com.example.mockproject.constant.APIConstant.Companion.PROFILE_PREF
 import com.example.mockproject.constant.Constant
 import com.example.mockproject.database.DatabaseOpenHelper
 import com.example.mockproject.eventbus.ReminderEvent
-import com.example.mockproject.listenercallback.*
+import com.example.mockproject.listenercallback.BadgeListener
+import com.example.mockproject.listenercallback.DetailListener
+import com.example.mockproject.listenercallback.FavoriteToRecommendListener
+import com.example.mockproject.listenercallback.FavouriteListener
+import com.example.mockproject.listenercallback.MovieListener
+import com.example.mockproject.listenercallback.ProfileListener
+import com.example.mockproject.listenercallback.ReminderListener
+import com.example.mockproject.listenercallback.SettingListener
+import com.example.mockproject.listenercallback.ToolbarTitleListener
 import com.example.mockproject.model.Movie
 import com.example.mockproject.util.BitmapConverter
-import com.example.mockproject.view.*
+import com.example.mockproject.view.AboutFragment
+import com.example.mockproject.view.ChangePasswordFragment
+import com.example.mockproject.view.DetailFragment
+import com.example.mockproject.view.EditProfileFragment
+import com.example.mockproject.view.FavoriteFragment
+import com.example.mockproject.view.MovieFragment
+import com.example.mockproject.view.ReminderFragment
+import com.example.mockproject.view.SettingFragment
 import com.google.android.material.navigation.NavigationView
 import com.google.android.material.tabs.TabLayout
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
 
 class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, FavouriteListener,
-    MovieListener, SettingListener, DetailListener, ProfileListener, ReminderListener {
+    MovieListener, SettingListener, DetailListener, ProfileListener, ReminderListener,
+    FavoriteToRecommendListener {
     private var mPermissionList = arrayOf(Manifest.permission.CAMERA)
     private var mIsGridView: Boolean = false
     private lateinit var mViewPager: ViewPager
@@ -77,6 +94,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
     private lateinit var mAboutFragment: AboutFragment
     private lateinit var mEditProfileFragment: EditProfileFragment
     private lateinit var mReminderFragment: ReminderFragment
+    private lateinit var mChangePasswordFragment: ChangePasswordFragment
 
     // Navigation view
     private lateinit var mProfileSharedPreferences: SharedPreferences
@@ -93,6 +111,12 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
     private lateinit var mReminderAdapter: ReminderAdapter
     private lateinit var mReminderShowAllBtn: Button
     private lateinit var mLogOutBtn: Button
+    private lateinit var mChangePassBtn: Button
+
+
+    //Firebase
+    private lateinit var fAuth: FirebaseAuth
+    private lateinit var fStore: FirebaseFirestore
 
     private var backPressedCount = 0
 
@@ -101,7 +125,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         mTabTitleList = mutableListOf(
-            "Movie", "Favorite", "Setting", "About"
+            "Movie", "Favorite", "Setting", "Suggest"
         )
         mTabIconList = mutableListOf(
             R.drawable.ic_home_24,
@@ -157,11 +181,28 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         mGenderText = mHeaderLayout.findViewById(R.id.tv_gender)
         mEditBtn = mHeaderLayout.findViewById(R.id.btn_edit_profile)
         mLogOutBtn = mHeaderLayout.findViewById(R.id.btn_log_out)
+        mChangePassBtn = mHeaderLayout.findViewById(R.id.btn_change_password)
         mLogOutBtn.setOnClickListener {
             FirebaseAuth.getInstance().signOut()
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
         }
+
+        mChangePasswordFragment = ChangePasswordFragment()
+        mChangePasswordFragment.setToolbarTitleListener(this)
+        mChangePassBtn.setOnClickListener {
+            supportFragmentManager.beginTransaction().apply {
+                add(
+                    R.id.layout_main,
+                    mChangePasswordFragment,
+                    Constant.FRAGMENT_CHANGEPASS_TAG
+                )
+                addToBackStack(null)
+                commit()
+            }
+//            Toast.makeText(this, "You Clicked me", Toast.LENGTH_SHORT).show()
+        }
+
         mEditBtn.setOnClickListener {
             if (this.mDrawerLayout.isDrawerOpen(GravityCompat.START)) {
                 this.mDrawerLayout.closeDrawer(GravityCompat.START)
@@ -226,6 +267,13 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
             requestPermissions(mPermissionList, 0)
         }
         createNotificationChannel()
+
+        val userName = intent.getStringExtra("Username")
+        mNameText.text = userName
+        val email = intent.getStringExtra("Email")
+        mEmailText.text = email
+//        Log.d("Did i find the fragment?", mViewPagerAdapter.getItem(3).toString())
+
     }
 
     override fun onBackPressed() {
@@ -236,11 +284,13 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
             if (fragmentManager.backStackEntryCount > 0) {
                 fragmentManager.popBackStack()
             } else {
-                if (backPressedCount < 1) {
+                if (backPressedCount <= 0) {
                     backPressedCount++
+                    Log.d("BackPressedCount", "$backPressedCount")
                     Toast.makeText(this, "Press back again to exit", Toast.LENGTH_SHORT).show()
                 } else {
                     super.onBackPressed()
+                    finish()
                 }
             }
         }
@@ -254,6 +304,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         /* cannot cast to search-view because the old one trying to cast an androidx.appcompat.widget.SearchView object to an android.widget.SearchView
         ---> to fix, need to use the androidx.appcompat.widget.search-view directly instead of casting to androidx.widget.Searchview
         */
+
         searchView.setSearchableInfo(manager.getSearchableInfo(componentName))
 
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
@@ -261,7 +312,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
                 searchView.clearFocus()
                 searchView.setQuery("", false)
                 menuItem.collapseActionView()
-                mMovieFragment.updateMovies(query?:"")
+                mMovieFragment.updateMovies(query ?: "")
                 return true
             }
 
@@ -329,11 +380,13 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
     override fun onUpdateFromFavorite(movie: Movie) {
         mMovieFragment.updateMovieList(movie, false)
         val detailFragment = supportFragmentManager.findFragmentByTag(Constant.FRAGMENT_DETAIL_TAG)
+        Log.d("Detail Fragment", detailFragment.toString())
         if (detailFragment != null && detailFragment.isAdded) {
             detailFragment as DetailFragment
             detailFragment.updateMovie(movie.id)
         }
     }
+
 
     override fun onUpdateFromDetail(movie: Movie, isFavourite: Boolean) {
         mMovieFragment.updateMovieList(movie, isFavourite)
@@ -409,7 +462,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
             Constant.PROFILE_NAME_KEY,
             Constant.PROFILE_NAME_DEFAULT
         )
-        mEmailText.text = name
+        mEmailText.text = email
         mBirthDayText.text = birthday
         if (isMale) {
             mGenderText.text = Constant.GENDER_MALE
@@ -448,7 +501,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         mViewPagerAdapter.addFragment(mMovieFragment, "Movie")
         mViewPagerAdapter.addFragment(mFavoriteFragment, "Favorite")
         mViewPagerAdapter.addFragment(mSettingFragment, "Setting")
-        mViewPagerAdapter.addFragment(mAboutFragment, "About")
+        mViewPagerAdapter.addFragment(mAboutFragment, "Suggest")
         mViewPager.offscreenPageLimit = 4
 
         mViewPager.adapter = mViewPagerAdapter
@@ -474,7 +527,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
     private fun setTitleFragment() {
         mViewPager.addOnPageChangeListener(object : OnPageChangeListener {
             override fun onPageScrolled(
-                osition: Int,
+                position: Int,
                 positionOffset: Float,
                 positionOffsetPixels: Int
             ) {
@@ -573,4 +626,9 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         loadReminderList()
     }
 
+    override fun fromFavoriteToRecommendation(movieList: ArrayList<Movie>) {
+        val aboutFragment = mViewPagerAdapter.getItem(3) as AboutFragment
+        aboutFragment.displayReceivedMovieFavoriteList(movieList)
+    }
+    //pass the favorite list from the Favorite Fragment to the About Fragment aka the Suggest Fragment
 }
