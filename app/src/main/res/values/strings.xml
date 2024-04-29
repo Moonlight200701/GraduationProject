@@ -12,7 +12,7 @@
     <string name="menu_home">Home</string>
     <string name="menu_gallery">Gallery</string>
     <string name="menu_slideshow">Slideshow</string>
-    <!-- TODO: Remove or change this placeholder text -->
+
     <string name="hello_blank_fragment">Hello blank fragment</string>
     <!-- Preference Titles -->
     <string name="messages_header">Messages</string>
@@ -25,8 +25,7 @@
     <!-- Sync Preferences -->
     <string name="sync_title">Sync email periodically</string>
     <string name="attachment_title">Download incoming attachments</string>
-    <string name="attachment_summary_on">Automatically download attachments for incoming emails
-    </string>
+    <string name="attachment_summary_on">Automatically download attachments for incoming emails</string>
     <string name="attachment_summary_off">Only download attachments when manually requested</string>
     <string name="app_introduce">This application was created to help you update information about the movie that is premiered and can set reminders for your favorite movie.</string>
     <string name="email_address">Email Address\n</string>
@@ -39,5 +38,6 @@
     <string name="confirm_new_password">Confirm new password</string>
     <string name="change">Change</string>
     <string name="new_password">New password</string>
+    <string name="sample_name">Sample Name</string>
 
 </resources>

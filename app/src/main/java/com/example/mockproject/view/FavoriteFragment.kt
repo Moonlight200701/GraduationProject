@@ -169,8 +169,8 @@ class FavoriteFragment(
         }
         Log.d("My favorite", mMovieFavouriteList.toString())
         loadFavouriteList()
-//        mFavoriteToRecommendListener = activity as FavoriteToRecommendListener
-//        mFavoriteToRecommendListener.fromFavoriteToRecommendation(mMovieFavouriteList)
+        mFavoriteToRecommendListener = activity as FavoriteToRecommendListener
+        mFavoriteToRecommendListener.fromFavoriteToRecommendation(mMovieFavouriteList)
 
     }
 

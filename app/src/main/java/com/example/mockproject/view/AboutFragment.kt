@@ -15,31 +15,39 @@ import com.example.mockproject.adapters.RecommendationAdapter
 import com.example.mockproject.api.ApiInterface
 import com.example.mockproject.api.RetrofitClient
 import com.example.mockproject.constant.APIConstant
+import com.example.mockproject.constant.Constant
 import com.example.mockproject.listenercallback.OnDataLoaded
 import com.example.mockproject.model.CastAndCrew
 import com.example.mockproject.model.CastCrewList
 import com.example.mockproject.model.Movie
 import com.example.mockproject.model.MovieDataRecommend
 import com.example.mockproject.model.MovieDataRecommendList
-import com.example.mockproject.model.MovieList
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import java.io.File
 import java.io.FileWriter
 import java.io.IOException
+import java.util.concurrent.CountDownLatch
 
 //This fragment is for recommending movies
 class AboutFragment : Fragment(), View.OnClickListener, OnDataLoaded {
+    //The movie from the API
     private var mMovieListFromApi = ArrayList<MovieDataRecommend>()
-    private var mMovieToRecommend = ArrayList<MovieDataRecommend>()
 
-    private var mMovieRecommendationList = ArrayList<Movie>()
-
-    private val movieCastAndCrewMap = mutableMapOf<Int, MutableMap<String,Any>>()
+    //The movie from the Favorite list
     private var mMovieFavorite = ArrayList<Movie>()
+
+    //The data inside the onResponse when using retrofit
+    private val mMovieDataForRecommend = mutableMapOf<Int, MutableMap<String, Any>>()
+    private val mMovieDataInFavoriteList = mutableMapOf<Int, MutableMap<String, Any>>()
+
     private lateinit var mRecommendationList: RecyclerView
     private lateinit var mMovieRecommendationAdapter: RecommendationAdapter
     override fun onCreateView(
@@ -48,14 +56,18 @@ class AboutFragment : Fragment(), View.OnClickListener, OnDataLoaded {
     ): View? {
         val rootView = inflater.inflate(R.layout.fragment_about, container, false)
         setHasOptionsMenu(true)
-        mRecommendationList = rootView.findViewById(R.id.list_recyclerview_recommend)
+        return rootView
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        mRecommendationList = view.findViewById(R.id.list_recyclerview_recommend)
 //        val mMovieFavoriteData = arguments?.getSerializable("My favorite list") as? ArrayList<*>
-        Log.d("Movie From Favorite", mMovieFavorite.toString())
+//        Log.d("Movie From Favorite", mMovieFavorite.toString())
         getSomeMovieForRecommendation()
         mRecommendationList.layoutManager = LinearLayoutManager(context)
         mMovieRecommendationAdapter = RecommendationAdapter(mMovieListFromApi, this)
         mRecommendationList.adapter = mMovieRecommendationAdapter
-        return rootView
     }
 
     override fun onPrepareOptionsMenu(menu: Menu) {
@@ -72,14 +84,19 @@ class AboutFragment : Fragment(), View.OnClickListener, OnDataLoaded {
             retrofit.getMovieListRecommendation("popular", APIConstant.API_KEY, "3")
 
         retrofitData.enqueue(object : Callback<MovieDataRecommendList> {
-            override fun onResponse(call: Call<MovieDataRecommendList>, response: Response<MovieDataRecommendList>) {
-                val responseBody = response.body()
-                val movieGotFromAPI = responseBody?.results as ArrayList<MovieDataRecommend>
-                mMovieListFromApi.addAll(movieGotFromAPI)
-                Log.d("How many movies? ", mMovieListFromApi.toString())
-                // Notify adapter once data is fully loaded
-                onMovieLoaded(mMovieListFromApi)
-                mMovieRecommendationAdapter.notifyDataSetChanged()
+            override fun onResponse(
+                call: Call<MovieDataRecommendList>,
+                response: Response<MovieDataRecommendList>
+            ) {
+                if (response.isSuccessful) {
+                    val responseBody = response.body()
+                    val movieGotFromAPI = responseBody?.results as ArrayList<MovieDataRecommend>
+                    mMovieListFromApi.addAll(movieGotFromAPI)
+                    Log.d("How many movies? ", mMovieListFromApi.toString())
+                    // Notify adapter once data is fully loaded
+                    getCastAndCrewOfThoseMovies()
+                    mMovieRecommendationAdapter.notifyDataSetChanged()
+                }
             }
 
             override fun onFailure(call: Call<MovieDataRecommendList>, t: Throwable) {
@@ -91,43 +108,121 @@ class AboutFragment : Fragment(), View.OnClickListener, OnDataLoaded {
     private fun getCastAndCrewOfThoseMovies() {
         val retrofit: ApiInterface =
             RetrofitClient().getRetrofitInstance().create(ApiInterface::class.java)
-        val gson: Gson = GsonBuilder().setPrettyPrinting().create()
-        for (mMovie in mMovieToRecommend) {
-            val retrofitData = retrofit.getCastAndCrew(mMovie.id, APIConstant.API_KEY)
+        val gson: Gson =
+            GsonBuilder().setPrettyPrinting().create() //for writing to json file purposes
 
-            retrofitData.enqueue(object : Callback<CastCrewList?> {
-                override fun onResponse(
-                    call: Call<CastCrewList?>?, response: Response<CastCrewList?>?
-                ) {
-                    val responseBody = response!!.body()
-                    val castCrewList = mutableListOf<CastAndCrew>()
-                    responseBody?.castList?.let { castCrewList.addAll(it) }
-                    responseBody?.crewList?.let { castCrewList.addAll(it) }
+        // Create a CountDownLatch with the size of mMovieListFromApi - the purpose? To prevent the application to process with unfinished data
+        val latch = CountDownLatch(mMovieListFromApi.size)
 
-                    val actors = mutableListOf<String>()
-                    for (cast in castCrewList) {
-                        actors.add(cast.name!!)
+        // Use a coroutine to make the network requests
+        CoroutineScope(Dispatchers.IO).launch {
+            for (mMovie in mMovieListFromApi) {
+                val retrofitData = retrofit.getCastAndCrew(mMovie.id, APIConstant.API_KEY)
+
+                retrofitData.enqueue(object : Callback<CastCrewList> {
+                    override fun onResponse(
+                        call: Call<CastCrewList?>, response: Response<CastCrewList?>
+                    ) {
+                        if (response.isSuccessful) {
+                            val responseBody = response.body()
+                            val castCrewList = mutableListOf<CastAndCrew>()
+                            responseBody?.castList?.let { castCrewList.addAll(it) }
+                            responseBody?.crewList?.let { castCrewList.addAll(it) }
+
+                            val actors = mutableListOf<String>()
+                            for (cast in castCrewList) {
+                                actors.add(cast.name!!)
+                            }
+
+                            val movieData = mutableMapOf<String, Any>()
+                            movieData[Constant.ACTOR_KEY] = actors
+                            movieData[Constant.GENRE_ID_KEY] = mMovie.genresId
+                            movieData[Constant.VOTE_AVERAGE_KEY] = mMovie.voteAverage
+
+                            mMovieDataForRecommend[mMovie.id] = movieData
+                        }
+
+                        // Decrement the latch count
+                        latch.countDown()
                     }
 
-                    val movieData = mutableMapOf<String, Any>()
-                    movieData["actors"] = actors
-                    movieData["genres_ids"] = mMovie.genresId
-                    movieData["vote_average"] = mMovie.voteAverage
+                    override fun onFailure(call: Call<CastCrewList>, t: Throwable) {
+                        Log.d("Retrofit error", "Network error")
 
-                    movieCastAndCrewMap[mMovie.id] = movieData
+                        // Decrement the latch count even if there's an error
+                        latch.countDown()
+                    }
+                })
+            }
 
-                    val jsonString: String = gson.toJson(movieCastAndCrewMap)
+            // Wait for all requests to complete
+            latch.await()
 
-                    // Write the JSON string to a file
-                    writeJsonToFile(jsonString)
+            // Switch to the Main thread to update the UI
+            withContext(Dispatchers.Main) {
+                getCastAndCrewForTheMovieFavorites()
 
-                    Log.d("Cast and crew map", movieCastAndCrewMap.toString())
-                }
+                //For observing purposes
+                val jsonString: String = gson.toJson(mMovieDataForRecommend)
+                writeJsonToFile(jsonString)
 
-                override fun onFailure(call: Call<CastCrewList?>?, t: Throwable?) {
-                    Toast.makeText(context, "Connection Error", Toast.LENGTH_SHORT).show()
-                }
-            })
+                Log.d("Cast and crew map", mMovieDataForRecommend.toString())
+            }
+        }
+    }
+
+
+    private fun getCastAndCrewForTheMovieFavorites() {
+        val retrofit: ApiInterface =
+            RetrofitClient().getRetrofitInstance().create(ApiInterface::class.java)
+
+        // Create a CountDownLatch with the size of mMovieFavorite
+        val latch = CountDownLatch(mMovieFavorite.size)
+
+        // Use a coroutine to make the network requests
+        CoroutineScope(Dispatchers.IO).launch {
+            for (mMovie in mMovieFavorite) {
+                val retrofitData = retrofit.getCastAndCrew(mMovie.id, APIConstant.API_KEY)
+
+                retrofitData.enqueue(object : Callback<CastCrewList> {
+                    override fun onResponse(
+                        call: Call<CastCrewList?>, response: Response<CastCrewList?>
+                    ) {
+                        if (response.isSuccessful) {
+                            val responseBody = response.body()
+                            val castCrewList = mutableListOf<CastAndCrew>()
+                            responseBody?.castList?.let { castCrewList.addAll(it) }
+                            responseBody?.crewList?.let { castCrewList.addAll(it) }
+
+                            val actors = mutableListOf<String>()
+                            for (cast in castCrewList) {
+                                actors.add(cast.name!!)
+                            }
+                            val movieData = mutableMapOf<String, Any>()
+                            movieData[Constant.ACTOR_KEY] = actors
+                            movieData[Constant.GENRE_ID_KEY] = mMovie.genreIds
+                            movieData[Constant.VOTE_AVERAGE_KEY] = mMovie.voteAverage
+                            mMovieDataInFavoriteList[mMovie.id] = movieData
+                        }
+                        // Decrement the latch count
+                        latch.countDown()
+                    }
+
+                    override fun onFailure(call: Call<CastCrewList>, t: Throwable) {
+                        Log.d("Retrofit error", "Network error")
+                        // Decrement the latch count even if there's an error
+                        latch.countDown()
+                    }
+                })
+            }
+
+            // Wait for all requests to complete
+            latch.await()
+
+            //Back to main thread after the background thread has finished fetching the data
+            withContext(Dispatchers.Main) {
+                onMovieLoaded(mMovieDataForRecommend, mMovieDataInFavoriteList)
+            }
         }
     }
 
@@ -149,36 +244,90 @@ class AboutFragment : Fragment(), View.OnClickListener, OnDataLoaded {
     }
 
     //Calculating based on Jaccard Similarity
-    private fun calculateActorSimilarity(actor1: List<String>, actor2: List<String>): Double {
-
-        return 0.0
-    }
-
-    private fun calculateGenreSimilarity(genreId1: List<Int>, genreId2: List<Int>): Double {
-        return 0.0
+    private fun loadMovieRecommendationList(movieList: MutableList<MovieDataRecommend>) {
+        mMovieRecommendationAdapter = RecommendationAdapter(movieList, this)
+        mRecommendationList.adapter = mMovieRecommendationAdapter
     }
 
     private fun getSimilarMovies(
-        inputMovie: Movie,
-        movies: List<Movie>,
+        movieToRecommendList: MutableMap<Int, MutableMap<String, Any>>,
+        movieFavoriteList: MutableMap<Int, MutableMap<String, Any>>,
         numSimilarMovies: Int
-    ): List<Movie> {
-        TODO("Not Yet Implemented")
+    ): List<Int> {
+        val similarityScore = mutableMapOf<Int, Double>()
+        for ((movieId, movieData) in movieToRecommendList) {
+            val genreIds = movieData[Constant.GENRE_ID_KEY] as List<*>
+            val actors = movieData[Constant.ACTOR_KEY] as List<*>
+//                val rating = movieData[Constant.VOTE_AVERAGE_KEY] as Double
+
+            for ((_, favMovieData) in movieFavoriteList) {
+                val favGenreIds = favMovieData[Constant.GENRE_ID_KEY] as List<*>
+                val favActors = favMovieData[Constant.ACTOR_KEY] as List<*>
+//                    val favRating = favMovieData[Constant.VOTE_AVERAGE_KEY] as Double
+
+                //Calculating Jaccard Similarity:
+                val genreIdIntersect = genreIds.intersect(favGenreIds.toSet()).size.toDouble()
+                val genreIdUnion = genreIds.union(favGenreIds).size.toDouble()
+                val actorIntersect = actors.intersect(favActors.toSet()).size.toDouble()
+                val actorUnion = actors.union(favActors).size.toDouble()
+                val jaccardSimilarity =
+                    ((genreIdIntersect / genreIdUnion) + (actorIntersect / actorUnion)) / 2.0
+//                val ratingSimilarity = 1 - abs(rating - favRating) / 10.0
+//
+//                val combinedSimilarity = 0.8 * jaccardSimilarity + 0.2 * ratingSimilarity
+
+                //The similarity Score map representing each movie score of similarity
+                similarityScore[movieId] =
+                    similarityScore.getOrDefault(movieId, 0.0) + jaccardSimilarity
+            }
+        }
+        val sortedSimilarityScore =
+            similarityScore.toList().sortedByDescending { (_, score) -> score }.toMap()
+        val topSimilarMoviesIds = sortedSimilarityScore.keys.take(numSimilarMovies)
+        val finalResult =
+            movieToRecommendList.filterKeys { it in topSimilarMoviesIds }.keys.toList()
+        Log.d("After Jaccard:", finalResult.toString())
+        getMoviesDetailOnId(finalResult)
+        return finalResult
     }
 
+
+    //For observing purpose
     fun displayReceivedMovieFavoriteList(movieList: ArrayList<Movie>) {
         mMovieFavorite.addAll(movieList)
-//        Log.e("Movie From Favorite", "Received: $mMovieFavorite")
+        Log.d("Movie from favorite", mMovieFavorite.toString())
     }
 
-    override fun onMovieLoaded(movieList: ArrayList<MovieDataRecommend>) {
-        mMovieToRecommend.addAll(movieList)
-        getCastAndCrewOfThoseMovies()
+    //Beginning of the jaccard similarity
+    override fun onMovieLoaded(
+        movieList: MutableMap<Int, MutableMap<String, Any>>,
+        movieFavoriteList: MutableMap<Int, MutableMap<String, Any>>
+    ) {
+        // Check if both recommended and favorite movie data are loaded
+        if (movieList.isNotEmpty() && movieFavoriteList.isNotEmpty()) {
+            // Perform similarity calculation
+            getSimilarMovies(movieList, movieFavoriteList, 5)
+        } else {
+            // Log a message or handle the case where data is not fully loaded
+            Log.d("AboutFragment", "Movie data is not fully loaded yet")
+        }
     }
 
 
-    override fun onCastAndCrewLoaded(movieId: Int, cast: List<String>, crew: List<String>) {
-
+    //Display the list of movies after jaccard
+    private fun getMoviesDetailOnId(movieIdList: List<Int>) {
+        val orderedMovieList = ArrayList<MovieDataRecommend>()
+        for (movieId in movieIdList) {
+            val movie = mMovieListFromApi.find { it.id == movieId }
+            if (movie != null) {
+                orderedMovieList.add(movie)
+                loadMovieRecommendationList(orderedMovieList)
+            }
+            Log.d("movie From api after sorting", orderedMovieList.toString())
+        }
     }
-
 }
+
+
+
+

@@ -30,7 +30,9 @@ class DatabaseOpenHelper(
         private var MOVIE_FAVORITE = "movie_favorite"
         private var REMINDER_TIME = "movie_reminder_time"
         private var REMINDER_TIME_DISPLAY = "movie_reminder_time_display"
-        private var MOVIE_GENRE_ID = "movie_genre_id"
+
+        private var GENRE_TABLE = "genre_table"
+        private var GENRE_ID = "genre_id"
     }
 
     override fun onCreate(db: SQLiteDatabase) {
@@ -56,17 +58,25 @@ class DatabaseOpenHelper(
                 "$MOVIE_FAVORITE INTEGER," +
                 "$REMINDER_TIME TEXT," +
                 "$REMINDER_TIME_DISPLAY TEXT)"
+        //SQL statement to create a genres table
+        val createTableMovieGenres = "CREATE TABLE $GENRE_TABLE ( " +
+                "$MOVIE_ID INTEGER," +
+                "$GENRE_ID TEXT," +
+                "PRIMARY KEY($MOVIE_ID, $GENRE_ID))"
         // Execute SQL statements to create tables
         db.execSQL(createTableMovie)
         db.execSQL(createTableReminder)
+        db.execSQL(createTableMovieGenres)
     }
 
     // Called when the database needs to be upgraded
     override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
         val dropTableMovie = "DROP TABLE $MOVIE_TABLE"
         val dropTableReminder = "DROP TABLE $REMINDER_TABLE"
+        val dropTableGenre = "DROP TABLE $GENRE_TABLE"
         db!!.execSQL(dropTableMovie)
         db.execSQL(dropTableReminder)
+        db.execSQL(dropTableGenre)
         onCreate(db)
     }
 
@@ -80,7 +90,7 @@ class DatabaseOpenHelper(
         contentValues.put(MOVIE_RATING, movie.voteAverage)
         contentValues.put(MOVIE_DATE, movie.releaseDate)
         contentValues.put(MOVIE_IMAGE_POSTER, movie.posterPath)
-        Log.d("Content Value", contentValues.toString())
+//        Log.d("Content Value", contentValues.toString())
         if (movie.adult) {
             contentValues.put(MOVIE_ADULT, 0)
         } else {
@@ -91,6 +101,19 @@ class DatabaseOpenHelper(
         db.close()
         return recordCount.toInt()
     }
+
+    //Function to add the genres taken from tmdb to the database
+    fun addMovieGenres(movieId: Int, genreIds: List<String>) {
+        val db = this.writableDatabase
+        genreIds.forEach { genreId ->
+            val contentValues = ContentValues()
+            contentValues.put(MOVIE_ID, movieId)
+            contentValues.put(GENRE_ID, genreId)
+            db.insert(GENRE_TABLE, null, contentValues)
+        }
+        db.close()
+    }
+
 
     // Method to get list of movies from the database
     fun getListMovie(): ArrayList<Movie> {
@@ -108,26 +131,38 @@ class DatabaseOpenHelper(
         // Iterate through cursor and add movies to list
         if (cursor.moveToFirst()) {
             do {
+                val movieId = cursor.getInt(0)
+                val genreIds = getGenreIdsForMovie(movieId)
                 movie = Movie(
-                    cursor.getInt(0),
+                    movieId,
                     cursor.getString(1),
                     cursor.getString(2),
                     cursor.getDouble(3),
                     cursor.getString(4),
                     cursor.getString(5),
                     cursor.getInt(6) == 0,
-                    cursor.getInt(7) == 0
+                    genreIds,
+                    cursor.getInt(7) == 0,
                 )
                 listMovie.add(movie)
             } while (cursor.moveToNext())
         }
         return listMovie
     }
-//
-//    private fun getGenresForMovie(movieId: Int): Any {
-//        val db = this.writableDatabase
-//
-//    }
+
+    private fun getGenreIdsForMovie(movieId: Int): List<String> {
+        val selectQuery = "SELECT $GENRE_ID FROM $GENRE_TABLE WHERE $MOVIE_ID = ?"
+        val db = this.readableDatabase
+        val cursor = db.rawQuery(selectQuery, arrayOf(movieId.toString()))
+        val genreIds = ArrayList<String>()
+        if (cursor.moveToFirst()) {
+            do {
+                genreIds.add(cursor.getString(0))
+            } while (cursor.moveToNext())
+        }
+        return genreIds
+    }
+
 
     fun addReminder(movie: Movie): Int {
         val db = this.writableDatabase
@@ -170,7 +205,7 @@ class DatabaseOpenHelper(
         contentValues.put(REMINDER_TIME, movie.reminderTime)
         contentValues.put(REMINDER_TIME_DISPLAY, movie.reminderTimeDisplay)
         val recordCount =
-            db.update(REMINDER_TABLE, contentValues, "movie_id = ?", arrayOf(movie.id.toString()))
+            db.update(REMINDER_TABLE, contentValues, "$MOVIE_ID = ?", arrayOf(movie.id.toString()))
         db.close()
         return recordCount
     }
@@ -179,7 +214,12 @@ class DatabaseOpenHelper(
         val db = this.writableDatabase
         val contentValues = ContentValues()
         contentValues.put(MOVIE_ID, id)
+
+        //Delete from the Movie Table
         val recordCount = db.delete(MOVIE_TABLE, "$MOVIE_ID = $id", null)
+
+        //Delete the movie from the genre table
+        val genreRecordCount = db.delete(GENRE_TABLE, "$MOVIE_ID = $id", null)
         db.close()
         return recordCount
     }
@@ -201,14 +241,17 @@ class DatabaseOpenHelper(
         }
         if (cursor.moveToFirst()) {
             do {
+                val movieId = cursor.getInt(0)
+                val genreIds = getGenreIdsForMovie(movieId)
                 movie = Movie(
-                    cursor.getInt(0),
+                    movieId,
                     cursor.getString(1),
                     cursor.getString(2),
                     cursor.getDouble(3),
                     cursor.getString(4),
                     cursor.getString(5),
                     cursor.getInt(6) == 0,
+                    genreIds,
                     cursor.getInt(7) == 0,
                     cursor.getString(8),
                     cursor.getString(9)
@@ -234,6 +277,7 @@ class DatabaseOpenHelper(
         }
         if (cursor.moveToFirst()) {
             do {
+                val genreIds = getGenreIdsForMovie(cursor.getInt(0))
                 movie = Movie(
                     cursor.getInt(0),
                     cursor.getString(1),
@@ -242,6 +286,7 @@ class DatabaseOpenHelper(
                     cursor.getString(4),
                     cursor.getString(5),
                     cursor.getInt(6) == 0,
+                    genreIds,
                     cursor.getInt(7) == 0,
                     cursor.getString(8),
                     cursor.getString(9)

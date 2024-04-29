@@ -26,8 +26,8 @@ interface ApiInterface {
     fun searchMovie(
         @Query("query") query: String,
         @Query("api_key") apiKey: String,
-        @Query("include_adult") includeAdult: Boolean = false,
-        @Query("language") language: String = "en-US",
+//        @Query("include_adult") includeAdult: Boolean = false,
+//        @Query("language") language: String = "en-US",
         @Query("page") pageNumber: String
     ): Call<MovieList>
 
@@ -37,5 +37,4 @@ interface ApiInterface {
         @Query("api_key") apiKey: String,
         @Query("page") pageNumber: String
     ): Call<MovieDataRecommendList>
-
 }

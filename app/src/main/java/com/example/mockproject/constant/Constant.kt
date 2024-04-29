@@ -23,7 +23,6 @@ class Constant {
         const val FRAGMENT_DETAIL_TAG = "FRAGMENT_DETAIL_TAG"
         const val FRAGMENT_EDIT_PROFILE_TAG = "FRAGMENT_EDIT_PROFILE_TAG"
         const val FRAGMENT_REMINDER_TAG = "FRAGMENT_REMINDER_TAG"
-        const val FRAGMENT_ABOUT_TAG = "FRAGMENT_ABOUT_TAG"
 
         const val FRAGMENT_CHANGEPASS_TAG = "FRAGMENT_CHANGEPASS_TAG"
 
@@ -33,5 +32,9 @@ class Constant {
         const val BUNDLE_TITLE_KEY = "BUNDLE_TITLE_KEY"
         const val BUNDLE_RATE_KEY = "BUNDLE_RATE_KEY"
         const val BUNDLE_RELEASE_KEY = "BUNDLE_RELEASE_KEY"
+
+        const val GENRE_ID_KEY = "genres_ids"
+        const val ACTOR_KEY = "actors"
+        const val VOTE_AVERAGE_KEY = "vote_average"
     }
 }

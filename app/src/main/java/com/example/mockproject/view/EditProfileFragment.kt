@@ -10,7 +10,13 @@ import android.view.LayoutInflater
 import android.view.Menu
 import android.view.View
 import android.view.ViewGroup
-import android.widget.*
+import android.widget.Button
+import android.widget.EditText
+import android.widget.ImageView
+import android.widget.RadioButton
+import android.widget.RadioGroup
+import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
@@ -20,7 +26,7 @@ import com.example.mockproject.constant.Constant.Companion.PROFILE_AVATAR_KEY
 import com.example.mockproject.listenercallback.ProfileListener
 import com.example.mockproject.listenercallback.ToolbarTitleListener
 import com.example.mockproject.util.BitmapConverter
-import java.util.*
+import java.util.Calendar
 
 class EditProfileFragment : Fragment() {
     private lateinit var mAvatarImg: ImageView
@@ -89,9 +95,11 @@ class EditProfileFragment : Fragment() {
             val birthday = mDateOfBirthText.text.toString()
             if (name == "" || email == "" || birthday == "") {
                 Toast.makeText(context, "Fill all information!", Toast.LENGTH_SHORT).show()
-            } else
+            } else {
                 mProfileListener.onSaveProfile(name, email, birthday, mIsMale, mProfileBitmap)
-            requireActivity().supportFragmentManager.beginTransaction().remove(this).commit()
+                requireActivity().supportFragmentManager.beginTransaction().remove(this).commit()
+                Toast.makeText(context, "Save changes successfully", Toast.LENGTH_SHORT).show()
+            }
         }
 
         val bundle = arguments

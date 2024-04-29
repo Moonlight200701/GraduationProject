@@ -22,7 +22,7 @@ class RegisterActivity : AppCompatActivity() {
     private var valid = true
 
     private lateinit var auth: FirebaseAuth
-    private lateinit var store: FirebaseFirestore
+    private lateinit var fStore: FirebaseFirestore
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_register)
@@ -40,7 +40,7 @@ class RegisterActivity : AppCompatActivity() {
         checkField(confirmPassword)
 
         auth = FirebaseAuth.getInstance()
-        store = FirebaseFirestore.getInstance()
+        fStore = FirebaseFirestore.getInstance()
 
         goToLogin.setOnClickListener {
             startActivity(Intent(this, LoginActivity::class.java))
@@ -59,11 +59,12 @@ class RegisterActivity : AppCompatActivity() {
                                 if (it.isSuccessful) {
                                     val user: FirebaseUser? = auth.currentUser
                                     val df: DocumentReference =
-                                        store.collection("Users").document(user!!.uid)
+                                        fStore.collection("Users").document(user!!.uid)
                                     val userInfo: HashMap<String, Any> = HashMap()
                                     userInfo["FullName"] = fullName.text.toString()
                                     userInfo["Email"] = email.text.toString()
                                     userInfo["Password"] = password.text.toString()
+                                    userInfo["isAdmin"] = 0
                                     df.set(userInfo)
                                     startActivity(Intent(this, LoginActivity::class.java))
                                     finish()

@@ -64,11 +64,13 @@ class LoginActivity : AppCompatActivity() {
                                     // Get the data from the document
                                     val email = document.getString("Email")
                                     val name = document.getString("FullName")
+                                    val isAdmin = document.getString("isAdmin")
                                     Log.d("From firebase", name.toString())
                                     Toast.makeText(this, "Welcome $name!", Toast.LENGTH_SHORT).show()
                                     val intent = Intent(this, MainActivity::class.java)
                                     intent.putExtra("Username", name)
                                     intent.putExtra("Email", email)
+                                    intent.putExtra("isAdmin", isAdmin)
                                     startActivity(intent)
                                     finish()
                                 } else {
@@ -86,7 +88,7 @@ class LoginActivity : AppCompatActivity() {
                     }
                 }
             } else {
-                Toast.makeText(this, "Empty fields are not allowed !", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Empty fields are not allowed!", Toast.LENGTH_SHORT).show()
             }
         }
 

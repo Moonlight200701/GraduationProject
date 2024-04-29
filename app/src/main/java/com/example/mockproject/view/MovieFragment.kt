@@ -150,6 +150,7 @@ class MovieFragment(
                             }
                     } else {
                         mDatabaseOpenHelper.addMovie(movieItem)
+                        mDatabaseOpenHelper.addMovieGenres(movieItem.id, movieItem.genreIds)
                         val favoriteData = hashMapOf(
                             "id" to movieItem.id,
                             "title" to movieItem.title,
@@ -295,8 +296,8 @@ class MovieFragment(
             retrofit.searchMovie(
                 query,
                 APIConstant.API_KEY,
-                includeAdult = false,
-                language = "en-US",
+//                includeAdult = false,
+//                language = "en-US",
                 pageNumber = "$mCurrentPage"
             )
         } else {
@@ -323,7 +324,7 @@ class MovieFragment(
 
                 // Add load more item if necessary
                 if (mCurrentPage < responseBody.totalPages) {
-                    val loadMoreItem = Movie(0, "0", "0", 0.0, "0", "0", false, false, "0", "0")
+                    val loadMoreItem = Movie(0, "0", "0", 0.0, "0", "0", false, listOf(),false, "0", "0")
                     mMovieList.add(loadMoreItem)
                     Log.d("Movie that get by api", mMovieList.toString())
                 }

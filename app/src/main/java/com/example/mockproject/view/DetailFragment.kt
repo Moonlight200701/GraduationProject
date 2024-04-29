@@ -191,6 +191,7 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
                             }
                     } else {
                         mDatabaseOpenHelper.addMovie(mMovie)
+                        mDatabaseOpenHelper.addMovieGenres(mMovie.id, mMovie.genreIds)
                         val favoriteData = hashMapOf(
                             "id" to mMovie.id,
                             "title" to mMovie.title,

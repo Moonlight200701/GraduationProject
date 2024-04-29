@@ -11,7 +11,9 @@ data class Movie(
     @SerializedName("release_date") var releaseDate: String,
     @SerializedName("poster_path") var posterPath: String,
     @SerializedName("adult") var adult: Boolean,
+    @SerializedName("genre_ids") var genreIds: List<String>, //added this line
     var isFavorite: Boolean = false,
     var reminderTime: String = "",
     var reminderTimeDisplay: String = "",
+
 ) : Serializable

@@ -113,7 +113,6 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
     private lateinit var mLogOutBtn: Button
     private lateinit var mChangePassBtn: Button
 
-
     //Firebase
     private lateinit var fAuth: FirebaseAuth
     private lateinit var fStore: FirebaseFirestore
@@ -125,7 +124,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         mTabTitleList = mutableListOf(
-            "Movie", "Favorite", "Setting", "Suggest"
+            "Movie", "Favorite", "Setting", "Suggest", "Accounts"
         )
         mTabIconList = mutableListOf(
             R.drawable.ic_home_24,
@@ -493,9 +492,11 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         supportActionBar!!.setDisplayShowHomeEnabled(true)
     }
 
+    //set up tab for the view pager
     private fun setUpTabs() {
         mViewPager = findViewById(R.id.view_pager)
         mTabLayout = findViewById(R.id.tab_layout)
+        val isAdmin = intent.getStringExtra("isAdmin")
 
         mViewPagerAdapter = ViewPagerAdapter(supportFragmentManager)
         mViewPagerAdapter.addFragment(mMovieFragment, "Movie")
@@ -511,6 +512,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         for (index in 0 until countFragment) {
             mTabLayout.getTabAt(index)!!.setCustomView(R.layout.tab_item)
             val tabView = mTabLayout.getTabAt(index)!!.customView
+
             val titleTab = tabView!!.findViewById<TextView>(R.id.tab_title)
             titleTab.text = mTabTitleList[index]
             val iconTab = tabView.findViewById<ImageView>(R.id.tab_icon)
@@ -520,6 +522,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
                 badgeText.visibility = View.VISIBLE
                 badgeText.setText("$mFavouriteCount", TextView.BufferType.EDITABLE)
             }
+
         }
         setTitleFragment()
     }
@@ -542,6 +545,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         })
     }
 
+    //Load profile data
     private fun loadProfileData() {
         try {
             mAvatarImg.setImageBitmap(
