@@ -38,7 +38,6 @@ class FavoriteFragment(
     private lateinit var mReminderListener: ReminderListener
     private lateinit var mFavoriteToRecommendListener: FavoriteToRecommendListener
 
-
     //Firebase
     private lateinit var fAuth: FirebaseAuth
 
@@ -49,7 +48,6 @@ class FavoriteFragment(
     fun setBadgeListener(badgeListener: BadgeListener) {
         this.mBadgeListener = badgeListener
     }
-
 
     fun setFavouriteListener(favouriteListener: FavouriteListener) {
         this.mFavouriteListener = favouriteListener
@@ -70,12 +68,6 @@ class FavoriteFragment(
         mMovieRecyclerView = view.findViewById(R.id.list_recycleView_favorite)
         loadFavouriteList()
         Log.d("My favorite list", mMovieFavouriteList.toString())
-//        val bundle = Bundle().apply {
-//            putSerializable("My favorite list", mMovieFavouriteList)
-//        }
-//        val recommendationArgument = AboutFragment()
-//        recommendationArgument.arguments = bundle
-//        Log.d("My Favorite List", recommendationArgument.arguments.toString())
         fAuth = FirebaseAuth.getInstance()
         setHasOptionsMenu(true)
         return view

@@ -70,7 +70,8 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
     private lateinit var mReminderListener: ReminderListener
 
     //Firebase
-    private lateinit var fAuth: FirebaseAuth
+    private var fAuth = FirebaseAuth.getInstance()
+    private val user: FirebaseUser? = fAuth.currentUser
 
     fun setToolbarTitleListener(toolbarTitleListener: ToolbarTitleListener) {
         this.mToolbarTitleListener = toolbarTitleListener
@@ -94,9 +95,13 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
     ): View {
         val view: View = inflater.inflate(R.layout.fragment_detail, container, false)
         val bundle = this.arguments
+        var userId = ""
+        if (user != null) {
+            userId = user.uid
+        }
         if (bundle != null) {
             mMovie = bundle.getSerializable(Constant.MOVIE_KEY) as Movie
-            val movieReminderList = mDatabaseOpenHelper.getReminderByMovieId(mMovie.id)
+            val movieReminderList = mDatabaseOpenHelper.getReminderByMovieId(mMovie.id, userId)
             if (movieReminderList.isEmpty()) {
                 mReminderExisted = false
             } else {
@@ -113,7 +118,7 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
         mReminderTimeText = view.findViewById(R.id.reminder_time_text)
         mOverviewText = view.findViewById(R.id.overview_text)
         mCastRecyclerView = view.findViewById(R.id.cast_and_crew_recyclerview)
-        fAuth = FirebaseAuth.getInstance()
+
 
         if (mMovie.isFavorite) {
             mFavouriteBtn.setImageResource(R.drawable.ic_star_black_24)
@@ -190,11 +195,17 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
                                 ).show()
                             }
                     } else {
-                        mDatabaseOpenHelper.addMovie(mMovie)
+                        mDatabaseOpenHelper.addMovie(mMovie, userId)
                         mDatabaseOpenHelper.addMovieGenres(mMovie.id, mMovie.genreIds)
                         val favoriteData = hashMapOf(
                             "id" to mMovie.id,
                             "title" to mMovie.title,
+                            "poster path" to mMovie.posterPath,
+                            "overview" to mMovie.overview,
+                            "vote average" to mMovie.voteAverage,
+                            "release date" to mMovie.releaseDate,
+                            "genre ids" to mMovie.genreIds,
+                            "adult" to mMovie.adult
                             // Add other movie details here as needed
                         )
                         favoritesRef.document(mMovie.id.toString()).set(favoriteData)
@@ -246,6 +257,10 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun createReminder() {
+        var userId = ""
+        if (user != null) {
+            userId = user.uid
+        }
         val currentDateTime = Calendar.getInstance()
         val startYear = currentDateTime.get(Calendar.YEAR)
         val startMonth = currentDateTime.get(Calendar.MONTH)
@@ -278,7 +293,7 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
                         Toast.makeText(context, "Update reminder fail", Toast.LENGTH_SHORT).show()
                     }
                 } else {
-                    if (mDatabaseOpenHelper.addReminder(mMovie) > 0) {
+                    if (mDatabaseOpenHelper.addReminder(mMovie, userId) > 0) {
                         mReminderExisted = true
                         mReminderListener.onLoadReminder()
                         NotificationUtil().createNotification(

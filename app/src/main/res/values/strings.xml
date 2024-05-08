@@ -38,6 +38,6 @@
     <string name="confirm_new_password">Confirm new password</string>
     <string name="change">Change</string>
     <string name="new_password">New password</string>
-    <string name="sample_name">Sample Name</string>
+    <string name="sample_name">Ex: Danny</string>
 
 </resources>

@@ -62,7 +62,8 @@ class MovieFragment(
     private lateinit var mReminderListener: ReminderListener
 
     //Firebase
-    private lateinit var fAuth: FirebaseAuth
+    private var fAuth = FirebaseAuth.getInstance()
+    private val user: FirebaseUser? = fAuth.currentUser
 
     fun setToolbarTitleListener(toolbarTitleListener: ToolbarTitleListener) {
         this.mToolbarTitleListener = toolbarTitleListener
@@ -95,8 +96,14 @@ class MovieFragment(
         mProgressBarLayout = rootView.findViewById(R.id.progress_bar_layout)
         mMovieRecyclerView = rootView.findViewById(R.id.movie_recycle)
         mHandler = Handler(Looper.getMainLooper())
-        mMovieListDB = mDatabaseOpenHelper.getListMovie()
-        fAuth = FirebaseAuth.getInstance()
+
+
+        if(user != null) {
+            val userId = user.uid
+            mMovieListDB = mDatabaseOpenHelper.getListMovie(userId)
+        }
+        Log.d("mMovieDB", mMovieListDB.toString())
+
         loadDataBySetting()
         updateMovieList()
         mHandler.postDelayed({
@@ -119,7 +126,6 @@ class MovieFragment(
                 val position = view.tag as Int
                 Log.d("MovieTag", view.tag.toString())
                 val movieItem: Movie = mMovieList[position]
-                val user: FirebaseUser? = fAuth.currentUser
                 Log.d("Current User", user.toString())
                 Log.d("Movie Item", movieItem.toString())
 
@@ -149,15 +155,18 @@ class MovieFragment(
                                 ).show()
                             }
                     } else {
-                        mDatabaseOpenHelper.addMovie(movieItem)
+                        mDatabaseOpenHelper.addMovie(movieItem, userId)
                         mDatabaseOpenHelper.addMovieGenres(movieItem.id, movieItem.genreIds)
                         val favoriteData = hashMapOf(
                             "id" to movieItem.id,
                             "title" to movieItem.title,
-//                            "poster path" to movieItem.posterPath,
-//                            "overview" to movieItem.overview,
+                            "poster path" to movieItem.posterPath,
+                            "overview" to movieItem.overview,
+                            "vote average" to movieItem.voteAverage,
+                            "release date" to movieItem.releaseDate,
+                            "genre ids" to movieItem.genreIds,
+                            "adult" to movieItem.adult
 
-                            // Add other movie details here as needed
                         )
                         favoritesRef.document(movieItem.id.toString()).set(favoriteData)
                             .addOnSuccessListener {
@@ -192,7 +201,7 @@ class MovieFragment(
                 detailFragment.setRemindListener(mReminderListener)
                 detailFragment.arguments = bundle
                 requireActivity().supportFragmentManager.beginTransaction().apply {
-                    add(R.id.movie_fragment_content, detailFragment, Constant.FRAGMENT_DETAIL_TAG)
+                    replace(R.id.movie_fragment_content, detailFragment, Constant.FRAGMENT_DETAIL_TAG)
                     addToBackStack(null)
                     commit()
                     mToolbarTitleListener.onUpdateToolbarTitle(movieItem.title)
@@ -221,7 +230,7 @@ class MovieFragment(
         loadDataBySetting()
         updateMovieList()
         mHandler.postDelayed({
-            getMovieListFromApi(false, false, null)
+            getMovieListFromApi(isRefresh = false, isLoadMore = false, query = null)
         }, 1000)
     }
 
@@ -253,7 +262,7 @@ class MovieFragment(
                 super.onScrolled(recyclerView, dx, dy)
                 if (isLastItemDisplaying(recyclerView)) {
                     mHandler.postDelayed({
-                        getMovieListFromApi(false, true, null)
+                        getMovieListFromApi(isRefresh = false, isLoadMore = true, query = null)
                     }, 1000)
                 }
             }
@@ -296,18 +305,17 @@ class MovieFragment(
             retrofit.searchMovie(
                 query,
                 APIConstant.API_KEY,
-//                includeAdult = false,
-//                language = "en-US",
-                pageNumber = "$mCurrentPage"
+                includeAdult = false,
+                language = "en-US",
             )
         } else {
             retrofit.getMovieList(mCategoryPref, APIConstant.API_KEY, "$mCurrentPage")
         }
 
         retrofitData.enqueue(object : Callback<MovieList?> {
-            override fun onResponse(call: Call<MovieList?>?, response: Response<MovieList?>?) {
+            override fun onResponse(call: Call<MovieList?>, response: Response<MovieList?>) {
                 mMovieAdapter.removeItemLoading()
-                val responseBody = response!!.body()
+                val responseBody = response.body()
                 val movieResultList = responseBody?.results as ArrayList<Movie>
                 // Clear the current list if not loading more
                 if (!isLoadMore) {
@@ -341,7 +349,7 @@ class MovieFragment(
                 }
             }
 
-            override fun onFailure(call: Call<MovieList?>?, t: Throwable?) {
+            override fun onFailure(call: Call<MovieList?>, t: Throwable) {
                 if (isLoadMore) {
                     mCurrentPage -= 1
                 } else {
@@ -356,8 +364,8 @@ class MovieFragment(
     }
 
     fun updateMovies(query: String?) {
-        getMovieListFromApi(true, false, null)
-        if (query.isNullOrEmpty() || mMovieList.none { it.title.contains(query, true) }) {
+        getMovieListFromApi(isRefresh = true, isLoadMore = false, query = null)
+        if (query.isNullOrEmpty()) {
             // If the query is empty or null, show all movies
             mMovieAdapter.setupMovieBySetting(
                 mMovieList,
@@ -365,12 +373,11 @@ class MovieFragment(
                 mReleaseYearPref,
                 mSortByPref,
             )
-            Toast.makeText(context, "Movies not found", Toast.LENGTH_SHORT).show()
-        } else {
+        } else  {
             mMovieList.clear()
             mProgressBarLayout.visibility = View.VISIBLE
-            getMovieListFromApi(false, false, query)
-            Toast.makeText(context, "Looking for your movie...", Toast.LENGTH_SHORT).show()
+            getMovieListFromApi(isRefresh = false, isLoadMore = false, query = query)
+//            Toast.makeText(context, "Looking for your movie...", Toast.LENGTH_SHORT).show()
 //            Log.d("MovieListAfterRemoving", filteredMovieList.toString())
         }
     }

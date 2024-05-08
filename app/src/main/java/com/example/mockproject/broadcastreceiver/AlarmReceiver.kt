@@ -10,6 +10,7 @@ import com.example.mockproject.R
 import com.example.mockproject.constant.Constant
 import com.example.mockproject.database.DatabaseOpenHelper
 import com.example.mockproject.eventbus.ReminderEvent
+import com.google.firebase.auth.FirebaseAuth
 import org.greenrobot.eventbus.EventBus
 
 const val notificationID = 1
@@ -17,6 +18,11 @@ const val channelID = "channelID"
 
 class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        var userId = ""
+        val user = FirebaseAuth.getInstance().currentUser
+        if(user != null){
+            userId = user.uid
+        }
         val movieId: Int
         val movieTitle: String
         val release: String
@@ -30,11 +36,11 @@ class AlarmReceiver : BroadcastReceiver() {
             "${vote}/10".also { rate = it }
 
             val databaseOpenHelper = DatabaseOpenHelper(context, null)
-            if (databaseOpenHelper.deleteReminderByMovieId(movieId) > 0) {
+            if (databaseOpenHelper.deleteReminderByMovieId(movieId, userId) > 0) {
                 val notification = NotificationCompat.Builder(context, channelID)
                     .setSmallIcon(R.drawable.ic_movie_24)
                     .setContentTitle(movieTitle)
-                    .setContentText("It's time to watch the film. Release: $release - Rate: $rate")
+                    .setContentText("It's time to watch $movieTitle. Release: $release - Rate: $rate")
                     .build()
                 val manager =
                     context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

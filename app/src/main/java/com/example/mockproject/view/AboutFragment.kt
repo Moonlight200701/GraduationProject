@@ -8,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.mockproject.R
@@ -16,16 +17,22 @@ import com.example.mockproject.api.ApiInterface
 import com.example.mockproject.api.RetrofitClient
 import com.example.mockproject.constant.APIConstant
 import com.example.mockproject.constant.Constant
+import com.example.mockproject.listenercallback.BadgeListener
+import com.example.mockproject.listenercallback.DetailListener
+import com.example.mockproject.listenercallback.MovieListener
 import com.example.mockproject.listenercallback.OnDataLoaded
+import com.example.mockproject.listenercallback.ReminderListener
+import com.example.mockproject.listenercallback.ToolbarTitleListener
 import com.example.mockproject.model.CastAndCrew
 import com.example.mockproject.model.CastCrewList
 import com.example.mockproject.model.Movie
-import com.example.mockproject.model.MovieDataRecommend
-import com.example.mockproject.model.MovieDataRecommendList
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import retrofit2.Call
@@ -39,10 +46,13 @@ import java.util.concurrent.CountDownLatch
 //This fragment is for recommending movies
 class AboutFragment : Fragment(), View.OnClickListener, OnDataLoaded {
     //The movie from the API
-    private var mMovieListFromApi = ArrayList<MovieDataRecommend>()
+    private var mMovieListFromApi = ArrayList<Movie>()
 
     //The movie from the Favorite list
     private var mMovieFavorite = ArrayList<Movie>()
+
+    //List of movies after jaccard
+    private var orderedMovieList = ArrayList<Movie>()
 
     //The data inside the onResponse when using retrofit
     private val mMovieDataForRecommend = mutableMapOf<Int, MutableMap<String, Any>>()
@@ -50,6 +60,29 @@ class AboutFragment : Fragment(), View.OnClickListener, OnDataLoaded {
 
     private lateinit var mRecommendationList: RecyclerView
     private lateinit var mMovieRecommendationAdapter: RecommendationAdapter
+
+    private lateinit var mToolbarTitleListener: ToolbarTitleListener
+    private lateinit var mBadgeListener: BadgeListener
+    private lateinit var mMovieListener: MovieListener
+    private lateinit var mDetailListener: DetailListener
+    private lateinit var mReminderListener: ReminderListener
+
+    fun setToolbarTitleListener(toolbarTitleListener: ToolbarTitleListener) {
+        this.mToolbarTitleListener = toolbarTitleListener
+    }
+
+    fun setBadgeListener(badgeListener: BadgeListener) {
+        this.mBadgeListener = badgeListener
+    }
+
+    fun setDetailListener(detailListener: DetailListener) {
+        this.mDetailListener = detailListener
+    }
+
+    fun setRemindListener(reminderListener: ReminderListener) {
+        this.mReminderListener = reminderListener
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -64,9 +97,11 @@ class AboutFragment : Fragment(), View.OnClickListener, OnDataLoaded {
         mRecommendationList = view.findViewById(R.id.list_recyclerview_recommend)
 //        val mMovieFavoriteData = arguments?.getSerializable("My favorite list") as? ArrayList<*>
 //        Log.d("Movie From Favorite", mMovieFavorite.toString())
+
+        //For showing the admin the list of movie for recommendation
         getSomeMovieForRecommendation()
         mRecommendationList.layoutManager = LinearLayoutManager(context)
-        mMovieRecommendationAdapter = RecommendationAdapter(mMovieListFromApi, this)
+        mMovieRecommendationAdapter = RecommendationAdapter(mutableListOf(), this)
         mRecommendationList.adapter = mMovieRecommendationAdapter
     }
 
@@ -80,29 +115,35 @@ class AboutFragment : Fragment(), View.OnClickListener, OnDataLoaded {
     private fun getSomeMovieForRecommendation() {
         val retrofit: ApiInterface =
             RetrofitClient().getRetrofitInstance().create(ApiInterface::class.java)
-        val retrofitData =
-            retrofit.getMovieListRecommendation("popular", APIConstant.API_KEY, "3")
 
-        retrofitData.enqueue(object : Callback<MovieDataRecommendList> {
-            override fun onResponse(
-                call: Call<MovieDataRecommendList>,
-                response: Response<MovieDataRecommendList>
-            ) {
-                if (response.isSuccessful) {
-                    val responseBody = response.body()
-                    val movieGotFromAPI = responseBody?.results as ArrayList<MovieDataRecommend>
-                    mMovieListFromApi.addAll(movieGotFromAPI)
-                    Log.d("How many movies? ", mMovieListFromApi.toString())
-                    // Notify adapter once data is fully loaded
-                    getCastAndCrewOfThoseMovies()
-                    mMovieRecommendationAdapter.notifyDataSetChanged()
+        // Create a new coroutine to run the network requests
+        lifecycleScope.launch {
+            val deferredList = mutableListOf<Deferred<Unit>>()
+            for (page in 3..6) {
+                val deferred = async(Dispatchers.IO) {
+                    try {
+                        val response = retrofit.getMovieListRecommendation("popular", APIConstant.API_KEY, page.toString()).execute()
+
+                        if (response.isSuccessful) {
+                            val responseBody = response.body()
+                            val movieGotFromAPI = responseBody?.results as ArrayList<Movie>
+                            mMovieListFromApi.addAll(movieGotFromAPI)
+
+                        }
+                    } catch (e: Exception) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(context, "Connection Error", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 }
+                deferredList.add(deferred)
             }
-
-            override fun onFailure(call: Call<MovieDataRecommendList>, t: Throwable) {
-                Toast.makeText(context, "Connection Error", Toast.LENGTH_SHORT).show()
-            }
-        })
+            deferredList.awaitAll()
+            Log.d("How many movies?", mMovieListFromApi.size.toString())
+            // Notify adapter once data is fully loaded
+            getCastAndCrewOfThoseMovies()
+            mMovieRecommendationAdapter.notifyDataSetChanged()
+        }
     }
 
     private fun getCastAndCrewOfThoseMovies() {
@@ -113,7 +154,7 @@ class AboutFragment : Fragment(), View.OnClickListener, OnDataLoaded {
 
         // Create a CountDownLatch with the size of mMovieListFromApi - the purpose? To prevent the application to process with unfinished data
         val latch = CountDownLatch(mMovieListFromApi.size)
-
+        Log.d("mMovieFromApi", mMovieListFromApi.size.toString())
         // Use a coroutine to make the network requests
         CoroutineScope(Dispatchers.IO).launch {
             for (mMovie in mMovieListFromApi) {
@@ -136,7 +177,7 @@ class AboutFragment : Fragment(), View.OnClickListener, OnDataLoaded {
 
                             val movieData = mutableMapOf<String, Any>()
                             movieData[Constant.ACTOR_KEY] = actors
-                            movieData[Constant.GENRE_ID_KEY] = mMovie.genresId
+                            movieData[Constant.GENRE_ID_KEY] = mMovie.genreIds
                             movieData[Constant.VOTE_AVERAGE_KEY] = mMovie.voteAverage
 
                             mMovieDataForRecommend[mMovie.id] = movieData
@@ -239,12 +280,16 @@ class AboutFragment : Fragment(), View.OnClickListener, OnDataLoaded {
         }
     }
 
-    override fun onClick(v: View?) {
-        Toast.makeText(context, "You clicked me", Toast.LENGTH_SHORT).show()
+    override fun onClick(view: View) {
+        when(view.id){
+            R.id.movie_item -> {
+                Toast.makeText(context, "You clicked me", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     //Calculating based on Jaccard Similarity
-    private fun loadMovieRecommendationList(movieList: MutableList<MovieDataRecommend>) {
+    private fun loadMovieRecommendationList(movieList: MutableList<Movie>) {
         mMovieRecommendationAdapter = RecommendationAdapter(movieList, this)
         mRecommendationList.adapter = mMovieRecommendationAdapter
     }
@@ -266,9 +311,9 @@ class AboutFragment : Fragment(), View.OnClickListener, OnDataLoaded {
 //                    val favRating = favMovieData[Constant.VOTE_AVERAGE_KEY] as Double
 
                 //Calculating Jaccard Similarity:
-                val genreIdIntersect = genreIds.intersect(favGenreIds.toSet()).size.toDouble()
+                val genreIdIntersect = genreIds.intersect(favGenreIds).size.toDouble()
                 val genreIdUnion = genreIds.union(favGenreIds).size.toDouble()
-                val actorIntersect = actors.intersect(favActors.toSet()).size.toDouble()
+                val actorIntersect = actors.intersect(favActors).size.toDouble()
                 val actorUnion = actors.union(favActors).size.toDouble()
                 val jaccardSimilarity =
                     ((genreIdIntersect / genreIdUnion) + (actorIntersect / actorUnion)) / 2.0
@@ -283,12 +328,15 @@ class AboutFragment : Fragment(), View.OnClickListener, OnDataLoaded {
         }
         val sortedSimilarityScore =
             similarityScore.toList().sortedByDescending { (_, score) -> score }.toMap()
+
+        Log.d("Similarity score", sortedSimilarityScore.toString())
         val topSimilarMoviesIds = sortedSimilarityScore.keys.take(numSimilarMovies)
-        val finalResult =
-            movieToRecommendList.filterKeys { it in topSimilarMoviesIds }.keys.toList()
-        Log.d("After Jaccard:", finalResult.toString())
-        getMoviesDetailOnId(finalResult)
-        return finalResult
+        Log.d("Top similarMovie Ids", topSimilarMoviesIds.toString())
+//        val finalResult =
+//            movieToRecommendList.filterKeys { it in topSimilarMoviesIds }.keys.toList()
+//        Log.d("After Jaccard:", finalResult.toString())
+        getMoviesDetailOnId(topSimilarMoviesIds)
+        return topSimilarMoviesIds
     }
 
 
@@ -316,7 +364,6 @@ class AboutFragment : Fragment(), View.OnClickListener, OnDataLoaded {
 
     //Display the list of movies after jaccard
     private fun getMoviesDetailOnId(movieIdList: List<Int>) {
-        val orderedMovieList = ArrayList<MovieDataRecommend>()
         for (movieId in movieIdList) {
             val movie = mMovieListFromApi.find { it.id == movieId }
             if (movie != null) {

@@ -64,7 +64,7 @@ class RegisterActivity : AppCompatActivity() {
                                     userInfo["FullName"] = fullName.text.toString()
                                     userInfo["Email"] = email.text.toString()
                                     userInfo["Password"] = password.text.toString()
-                                    userInfo["isAdmin"] = 0
+                                    userInfo["isAdmin"] = "0"
                                     df.set(userInfo)
                                     startActivity(Intent(this, LoginActivity::class.java))
                                     finish()

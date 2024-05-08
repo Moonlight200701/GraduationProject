@@ -24,7 +24,6 @@ class ReminderAdapter(
 
     fun setReminderListener(reminderListListener: ReminderListListener) {
         this.mReminderListListener = reminderListListener
-
     }
 
     fun updateData(listMovieReminder: ArrayList<Movie>) {

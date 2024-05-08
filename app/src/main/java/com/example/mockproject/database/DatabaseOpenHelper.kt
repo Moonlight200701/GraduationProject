@@ -6,7 +6,6 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteException
 import android.database.sqlite.SQLiteOpenHelper
-import android.util.Log
 import com.example.mockproject.model.Movie
 
 class DatabaseOpenHelper(
@@ -30,6 +29,7 @@ class DatabaseOpenHelper(
         private var MOVIE_FAVORITE = "movie_favorite"
         private var REMINDER_TIME = "movie_reminder_time"
         private var REMINDER_TIME_DISPLAY = "movie_reminder_time_display"
+        private var USER_ID = "user_id"
 
         private var GENRE_TABLE = "genre_table"
         private var GENRE_ID = "genre_id"
@@ -37,6 +37,7 @@ class DatabaseOpenHelper(
 
     override fun onCreate(db: SQLiteDatabase) {
         // SQL statement to create movie table
+        
         val createTableMovie = "CREATE TABLE $MOVIE_TABLE ( " +
                 "$MOVIE_ID INTEGER PRIMARY KEY," +
                 "$MOVIE_TITLE TEXT," +
@@ -45,7 +46,8 @@ class DatabaseOpenHelper(
                 "$MOVIE_DATE TEXT, " +
                 "$MOVIE_IMAGE_POSTER TEXT, " +
                 "$MOVIE_ADULT INTEGER, " +
-                "$MOVIE_FAVORITE INTEGER )"
+                "$MOVIE_FAVORITE INTEGER," +
+                "$USER_ID TEXT)"
         // SQL statement to create reminder table
         val createTableReminder = "CREATE TABLE $REMINDER_TABLE ( " +
                 "$MOVIE_ID INTEGER PRIMARY KEY," +
@@ -57,12 +59,14 @@ class DatabaseOpenHelper(
                 "$MOVIE_ADULT INTEGER, " +
                 "$MOVIE_FAVORITE INTEGER," +
                 "$REMINDER_TIME TEXT," +
-                "$REMINDER_TIME_DISPLAY TEXT)"
+                "$REMINDER_TIME_DISPLAY TEXT," +
+                "$USER_ID TEXT)"
         //SQL statement to create a genres table
         val createTableMovieGenres = "CREATE TABLE $GENRE_TABLE ( " +
                 "$MOVIE_ID INTEGER," +
                 "$GENRE_ID TEXT," +
                 "PRIMARY KEY($MOVIE_ID, $GENRE_ID))"
+
         // Execute SQL statements to create tables
         db.execSQL(createTableMovie)
         db.execSQL(createTableReminder)
@@ -81,7 +85,7 @@ class DatabaseOpenHelper(
     }
 
     // Method to add a movie to the database
-    fun addMovie(movie: Movie): Int {
+    fun addMovie(movie: Movie, userId: String) : Int {
         val db = this.writableDatabase
         val contentValues = ContentValues()
         contentValues.put(MOVIE_ID, movie.id)
@@ -90,6 +94,7 @@ class DatabaseOpenHelper(
         contentValues.put(MOVIE_RATING, movie.voteAverage)
         contentValues.put(MOVIE_DATE, movie.releaseDate)
         contentValues.put(MOVIE_IMAGE_POSTER, movie.posterPath)
+        contentValues.put(USER_ID, userId)
 //        Log.d("Content Value", contentValues.toString())
         if (movie.adult) {
             contentValues.put(MOVIE_ADULT, 0)
@@ -116,14 +121,14 @@ class DatabaseOpenHelper(
 
 
     // Method to get list of movies from the database
-    fun getListMovie(): ArrayList<Movie> {
+    fun getListMovie(userId: String): ArrayList<Movie> {
         val listMovie: ArrayList<Movie> = ArrayList()
-        val selectQuery = "SELECT * FROM $MOVIE_TABLE"
+        val selectQuery = "SELECT * FROM $MOVIE_TABLE where $USER_ID = ?"
         val db = this.readableDatabase
         val cursor: Cursor
         var movie: Movie
         try {
-            cursor = db.rawQuery(selectQuery, null)
+            cursor = db.rawQuery(selectQuery, arrayOf(userId))
         } catch (e: SQLiteException) {
             db.execSQL(selectQuery)
             return ArrayList()
@@ -143,6 +148,7 @@ class DatabaseOpenHelper(
                     cursor.getInt(6) == 0,
                     genreIds,
                     cursor.getInt(7) == 0,
+                    userId = cursor.getString(8)
                 )
                 listMovie.add(movie)
             } while (cursor.moveToNext())
@@ -164,7 +170,7 @@ class DatabaseOpenHelper(
     }
 
 
-    fun addReminder(movie: Movie): Int {
+    fun addReminder(movie: Movie, userId: String): Int {
         val db = this.writableDatabase
         val contentValues = ContentValues()
         contentValues.put(MOVIE_ID, movie.id)
@@ -173,6 +179,7 @@ class DatabaseOpenHelper(
         contentValues.put(MOVIE_RATING, movie.voteAverage)
         contentValues.put(MOVIE_DATE, movie.releaseDate)
         contentValues.put(MOVIE_IMAGE_POSTER, movie.posterPath)
+        contentValues.put(USER_ID, userId)
         if (movie.adult) {
             contentValues.put(MOVIE_ADULT, 0)
         } else {
@@ -189,12 +196,13 @@ class DatabaseOpenHelper(
         return recordCount.toInt()
     }
 
-    fun deleteReminderByMovieId(movieId: Int): Int {
+    fun deleteReminderByMovieId(movieId: Int, userId: String): Int {
         val db = this.writableDatabase
         val contentValues = ContentValues()
         contentValues.put(MOVIE_ID, movieId)
+        contentValues.put(USER_ID, userId)
         val recordCount =
-            db.delete(REMINDER_TABLE, "$MOVIE_ID = $movieId", null)
+            db.delete(REMINDER_TABLE, "$MOVIE_ID = ? AND $USER_ID = ?", arrayOf(movieId.toString(), userId))
         db.close()
         return recordCount
     }
@@ -219,22 +227,22 @@ class DatabaseOpenHelper(
         val recordCount = db.delete(MOVIE_TABLE, "$MOVIE_ID = $id", null)
 
         //Delete the movie from the genre table
-        val genreRecordCount = db.delete(GENRE_TABLE, "$MOVIE_ID = $id", null)
+        db.delete(GENRE_TABLE, "$MOVIE_ID = $id", null)
         db.close()
         return recordCount
     }
 
-    fun getListReminder(): ArrayList<Movie> {
+    fun getListReminder(userId: String): ArrayList<Movie> {
         val listMovie: ArrayList<Movie> = ArrayList()
         val selectQuery =
-            "SELECT * FROM $REMINDER_TABLE"
+            "SELECT * FROM $REMINDER_TABLE where $USER_ID = ?"
         val db = this.readableDatabase
         var movie: Movie
 
         val cursor: Cursor
 
         try {
-            cursor = db.rawQuery(selectQuery, null)
+            cursor = db.rawQuery(selectQuery, arrayOf(userId))
         } catch (e: SQLiteException) {
             db.execSQL(selectQuery)
             return ArrayList()
@@ -251,10 +259,11 @@ class DatabaseOpenHelper(
                     cursor.getString(4),
                     cursor.getString(5),
                     cursor.getInt(6) == 0,
-                    genreIds,
-                    cursor.getInt(7) == 0,
-                    cursor.getString(8),
-                    cursor.getString(9)
+                    genreIds = genreIds,
+                    isFavorite = cursor.getInt(7) == 0,
+                    reminderTime = cursor.getString(8),
+                    reminderTimeDisplay = cursor.getString(9),
+                    userId = cursor.getString(10)
                 )
                 listMovie.add(movie)
             } while (cursor.moveToNext())
@@ -262,15 +271,15 @@ class DatabaseOpenHelper(
         return listMovie
     }
 
-    fun getReminderByMovieId(movieId: Int): ArrayList<Movie> {
+    fun getReminderByMovieId(movieId: Int, userId: String): ArrayList<Movie> {
         val movieReminderList: ArrayList<Movie> = ArrayList()
         val selectQuery =
-            "SELECT * FROM $REMINDER_TABLE WHERE $MOVIE_ID = $movieId"
+            "SELECT * FROM $REMINDER_TABLE WHERE $MOVIE_ID = $movieId AND $USER_ID = ?"
         val db = this.readableDatabase
         val cursor: Cursor
         var movie: Movie
         try {
-            cursor = db.rawQuery(selectQuery, null)
+            cursor = db.rawQuery(selectQuery, arrayOf(userId))
         } catch (e: SQLiteException) {
             db.execSQL(selectQuery)
             return movieReminderList
@@ -289,7 +298,8 @@ class DatabaseOpenHelper(
                     genreIds,
                     cursor.getInt(7) == 0,
                     cursor.getString(8),
-                    cursor.getString(9)
+                    cursor.getString(9),
+                    userId = cursor.getString(10)
                 )
                 movieReminderList.add(movie)
             } while (cursor.moveToNext())

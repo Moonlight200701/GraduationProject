@@ -2,6 +2,7 @@ package com.example.mockproject.adapters
 
 import android.view.LayoutInflater
 import android.view.View
+import android.view.View.OnClickListener
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -10,18 +11,17 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.mockproject.R
 import com.example.mockproject.constant.APIConstant
 import com.example.mockproject.model.Movie
-import com.example.mockproject.model.MovieDataRecommend
 import com.squareup.picasso.Picasso
 
 class RecommendationAdapter(
-    private var mMovieList: MutableList<MovieDataRecommend>,
-    private var mViewClickListener: View.OnClickListener
+    private var mMovieList: MutableList<Movie>,
+    private var mViewClickListener: OnClickListener
 ) : RecyclerView.Adapter<RecommendationAdapter.ListViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ListViewHolder {
         val itemView = LayoutInflater.from(parent.context)
             .inflate(R.layout.movie_item_list, parent, false)
-        return ListViewHolder(itemView)
+        return ListViewHolder(itemView, mViewClickListener)
     }
 
     override fun getItemCount(): Int {
@@ -30,9 +30,10 @@ class RecommendationAdapter(
 
     override fun onBindViewHolder(holder: ListViewHolder, position: Int) {
         holder.bindDataList(position)
+        holder.itemView.setOnClickListener(mViewClickListener)
     }
 
-    inner class ListViewHolder(itemView: View) :
+    inner class ListViewHolder(itemView: View, private val mViewClickListener: OnClickListener) :
         RecyclerView.ViewHolder(itemView) {
         private var titleText: TextView = itemView.findViewById(R.id.item_list_title_text)
         private var movieImage: ImageView = itemView.findViewById(R.id.item_list_image)

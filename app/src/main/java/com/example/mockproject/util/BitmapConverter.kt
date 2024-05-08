@@ -6,6 +6,7 @@ import android.util.Base64
 import java.io.ByteArrayOutputStream
 
 class BitmapConverter {
+    //For the image taken by the camera
     fun encodeBase64(image: Bitmap): String? {
         val baos = ByteArrayOutputStream()
         image.compress(Bitmap.CompressFormat.JPEG, 100, baos)

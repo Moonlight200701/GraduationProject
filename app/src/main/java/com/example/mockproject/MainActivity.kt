@@ -114,15 +114,23 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
     private lateinit var mChangePassBtn: Button
 
     //Firebase
-    private lateinit var fAuth: FirebaseAuth
-    private lateinit var fStore: FirebaseFirestore
-
+    private var fAuth = FirebaseAuth.getInstance()
+    private val user = fAuth.currentUser
     private var backPressedCount = 0
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        //Firebase
+        var userId = ""
+        if(user != null) {
+            userId = user.uid
+            val db = FirebaseFirestore.getInstance()
+            val favoritesRef =
+                db.collection("Users").document(userId).collection("Favorites")
+        }
         mTabTitleList = mutableListOf(
             "Movie", "Favorite", "Setting", "Suggest", "Accounts"
         )
@@ -136,8 +144,8 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         mProfileSharedPreferences = getSharedPreferences(PROFILE_PREF, MODE_PRIVATE)
 
         mDatabaseOpenHelper = DatabaseOpenHelper(this, null)
-        mMovieReminderList = mDatabaseOpenHelper.getListReminder()
-        mMovieFavouriteList = mDatabaseOpenHelper.getListMovie()
+        mMovieReminderList = mDatabaseOpenHelper.getListReminder(userId)
+        mMovieFavouriteList = mDatabaseOpenHelper.getListMovie(userId)
         mFavouriteCount = mMovieFavouriteList.size
 
         // Navigation view
@@ -199,7 +207,6 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
                 addToBackStack(null)
                 commit()
             }
-//            Toast.makeText(this, "You Clicked me", Toast.LENGTH_SHORT).show()
         }
 
         mEditBtn.setOnClickListener {
@@ -271,9 +278,11 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         mNameText.text = userName
         val email = intent.getStringExtra("Email")
         mEmailText.text = email
-//        Log.d("Did i find the fragment?", mViewPagerAdapter.getItem(3).toString())
+        val isAdmin = intent.getStringExtra("isAdmin")
+//
 
     }
+
 
     override fun onBackPressed() {
         if (this.mDrawerLayout.isDrawerOpen(GravityCompat.START)) {
@@ -309,21 +318,16 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
                 searchView.clearFocus()
-                searchView.setQuery("", false)
-                menuItem.collapseActionView()
-                mMovieFragment.updateMovies(query ?: "")
-                return true
-            }
-
-            override fun onQueryTextChange(newText: String?): Boolean {
                 return false
             }
 
+            //every time the text is entered, search for that immediately
+            override fun onQueryTextChange(newText: String?): Boolean {
+                mMovieFragment.updateMovies(newText ?: "")
+                return true
+            }
+
         })
-
-        Log.d("Finding your choice", "${R.id.action_search}")
-        Log.d("Your searchView be like", "$searchView")
-
         return true
     }
 
@@ -500,8 +504,11 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
 
         mViewPagerAdapter = ViewPagerAdapter(supportFragmentManager)
         mViewPagerAdapter.addFragment(mMovieFragment, "Movie")
-        mViewPagerAdapter.addFragment(mFavoriteFragment, "Favorite")
-        mViewPagerAdapter.addFragment(mSettingFragment, "Setting")
+        if (isAdmin == "0") {
+            mViewPagerAdapter.addFragment(mFavoriteFragment, "Favorite")
+        } else {
+            mViewPagerAdapter.addFragment(mSettingFragment, "Setting")
+        }
         mViewPagerAdapter.addFragment(mAboutFragment, "Suggest")
         mViewPager.offscreenPageLimit = 4
 
@@ -512,22 +519,46 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         for (index in 0 until countFragment) {
             mTabLayout.getTabAt(index)!!.setCustomView(R.layout.tab_item)
             val tabView = mTabLayout.getTabAt(index)!!.customView
-
             val titleTab = tabView!!.findViewById<TextView>(R.id.tab_title)
-            titleTab.text = mTabTitleList[index]
             val iconTab = tabView.findViewById<ImageView>(R.id.tab_icon)
-            iconTab.setImageResource(mTabIconList[index])
-            if (index == 1) {
-                val badgeText = tabView.findViewById<TextView>(R.id.tab_badge)
-                badgeText.visibility = View.VISIBLE
-                badgeText.setText("$mFavouriteCount", TextView.BufferType.EDITABLE)
-            }
 
+            if (isAdmin == "0") {
+                when (index) {
+                    1 -> {
+                        val badgeText = tabView.findViewById<TextView>(R.id.tab_badge)
+                        badgeText.visibility = View.VISIBLE
+                        badgeText.setText("$mFavouriteCount", TextView.BufferType.EDITABLE)
+                        titleTab.text = mTabTitleList[index]
+                        iconTab.setImageResource(mTabIconList[index])
+                    }
+
+                    2 -> {
+                        titleTab.text = mTabTitleList[index + 1]
+                        iconTab.setImageResource(mTabIconList[index + 1])
+                    }
+
+                    else -> {
+                        titleTab.text = mTabTitleList[index]
+                        iconTab.setImageResource(mTabIconList[index])
+                    }
+                }
+            } else {
+                // Admin condition: skip the second element
+                if (index >= 1) {
+                    titleTab.text = mTabTitleList[index + 1]
+                    iconTab.setImageResource(mTabIconList[index + 1]) // Skip the second element
+                } else {
+                    // For index 0, set the first element
+                    titleTab.text = mTabTitleList[index]
+                    iconTab.setImageResource(mTabIconList[index])
+                }
+            }
         }
         setTitleFragment()
     }
 
     private fun setTitleFragment() {
+        val isAdmin = intent.getStringExtra("isAdmin")
         mViewPager.addOnPageChangeListener(object : OnPageChangeListener {
             override fun onPageScrolled(
                 position: Int,
@@ -538,7 +569,9 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
 
             override fun onPageSelected(position: Int) {
                 mTabLayout.nextFocusRightId = position
-                supportActionBar!!.title = (mTabTitleList[position])
+                val adjustedPosition =
+                    if (isAdmin == "1" && position > 0) position + 1 else if (isAdmin == "0" && position > 1) position + 1 else position
+                supportActionBar!!.title = mTabTitleList[adjustedPosition]
             }
 
             override fun onPageScrollStateChanged(state: Int) {}
@@ -582,7 +615,11 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
     }
 
     private fun loadReminderList() {
-        mMovieReminderList = mDatabaseOpenHelper.getListReminder()
+        var userId = ""
+        if(user != null){
+            userId = user.uid
+        }
+        mMovieReminderList = mDatabaseOpenHelper.getListReminder(userId)
         if (mMovieReminderList.isEmpty()) {
             mReminderLayout.visibility = View.GONE
         } else {
@@ -631,7 +668,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
     }
 
     override fun fromFavoriteToRecommendation(movieList: ArrayList<Movie>) {
-        val aboutFragment = mViewPagerAdapter.getItem(3) as AboutFragment
+        val aboutFragment = mViewPagerAdapter.getItem(2) as AboutFragment
         aboutFragment.displayReceivedMovieFavoriteList(movieList)
     }
     //pass the favorite list from the Favorite Fragment to the About Fragment aka the Suggest Fragment

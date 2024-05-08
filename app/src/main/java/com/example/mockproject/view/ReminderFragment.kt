@@ -17,6 +17,8 @@ import com.example.mockproject.listenercallback.ToolbarTitleListener
 import com.example.mockproject.model.Movie
 import com.example.mockproject.util.NotificationUtil
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
@@ -28,6 +30,10 @@ class ReminderFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fr
     private lateinit var mReminderList: ArrayList<Movie>
     private lateinit var mToolbarTitleListener: ToolbarTitleListener
     private lateinit var mReminderListener: ReminderListener
+
+    //Firebase
+    private var fAuth = FirebaseAuth.getInstance()
+    private val user: FirebaseUser? = fAuth.currentUser
 
     fun setToolbarTitleListener(toolbarTitleListener: ToolbarTitleListener) {
         this.mToolbarTitleListener = toolbarTitleListener
@@ -57,6 +63,10 @@ class ReminderFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fr
     }
 
     private fun showDeleteDialog(position: Int) {
+        var userId = ""
+        if (user != null) {
+            userId = user.uid
+        }
         val movie = mReminderList[position]
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("Confirm delete reminder")
@@ -64,7 +74,7 @@ class ReminderFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fr
             .setNegativeButton("No") { _, _ ->
             }
             .setPositiveButton("Yes") { _, _ ->
-                if (mDatabaseOpenHelper.deleteReminderByMovieId(movie.id) > -1) {
+                if (mDatabaseOpenHelper.deleteReminderByMovieId(movie.id, userId) > -1) {
                     NotificationUtil().cancelNotification(movie.id, requireContext())
                     mReminderList.removeAt(position)
                     mReminderAdapter.notifyDataSetChanged()
@@ -88,7 +98,11 @@ class ReminderFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fr
     }
 
     private fun loadReminderList() {
-        mReminderList = mDatabaseOpenHelper.getListReminder()
+        var userId = ""
+        if (user != null) {
+            userId = user.uid
+        }
+        mReminderList = mDatabaseOpenHelper.getListReminder(userId)
         mReminderAdapter = ReminderAdapter(mReminderList, ReminderAdapter.REMINDER_ALL)
         mReminderAdapter.setReminderListener(this)
         mReminderRecyclerView.adapter = mReminderAdapter
