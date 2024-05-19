@@ -135,7 +135,7 @@ class MovieFragment(
                     val favoritesRef =
                         db.collection("Users").document(userId).collection("Favorites")
                     if (movieItem.isFavorite) {
-                        mDatabaseOpenHelper.deleteMovie(movieItem.id)
+                        mDatabaseOpenHelper.deleteMovie(movieItem.id, userId)
                         favoritesRef.document(movieItem.id.toString()).delete()
                             .addOnSuccessListener {
                                 // Delete successful

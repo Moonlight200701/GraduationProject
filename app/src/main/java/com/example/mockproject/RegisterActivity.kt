@@ -1,15 +1,18 @@
 package com.example.mockproject
 
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FirebaseFirestore
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class RegisterActivity : AppCompatActivity() {
 
@@ -52,39 +55,65 @@ class RegisterActivity : AppCompatActivity() {
             val mConfirmPassword = confirmPassword.text.toString()
 
             if (mEmail.isNotEmpty() && mPassword.isNotEmpty() && mConfirmPassword.isNotEmpty()) {
-                if (mPassword == mConfirmPassword) {
-                    fAuth.fetchSignInMethodsForEmail(mEmail).addOnCompleteListener { task ->
-                        val signInMethods = task.result?.signInMethods
-                        if (!signInMethods.isNullOrEmpty()) {
-                            Toast.makeText(this, "Email already exists", Toast.LENGTH_SHORT).show()
-                        } else {
-                            // Proceed with creating the user as the email is not in use
-                            fAuth.createUserWithEmailAndPassword(mEmail, mPassword)
-                                .addOnCompleteListener {
-                                    if (it.isSuccessful) {
-                                        val user: FirebaseUser? = fAuth.currentUser
-                                        val df: DocumentReference =
-                                            fStore.collection("Users").document(user!!.uid)
-                                        val userInfo: HashMap<String, Any> = HashMap()
-                                        userInfo["FullName"] = fullName.text.toString()
-                                        userInfo["Email"] = email.text.toString()
-                                        userInfo["Password"] = password.text.toString()
-                                        userInfo["isAdmin"] = "0"
-                                        userInfo["Status"] = "Enabled"
-                                        userInfo["Birthday"] = "Unknown"
-                                        userInfo["Gender"] = "Unknown"
-                                        df.set(userInfo)
-                                        startActivity(Intent(this, LoginActivity::class.java))
-                                        Toast.makeText(this, "Create a new account successfully", Toast.LENGTH_SHORT).show()
-                                        finish()
-                                    } else {
-                                        Toast.makeText(this, it.exception?.message, Toast.LENGTH_SHORT).show()
+                if (mPassword.length in 8..14) {
+                    if (mPassword == mConfirmPassword) {
+                        fAuth.fetchSignInMethodsForEmail(mEmail).addOnCompleteListener { task ->
+                            val signInMethods = task.result?.signInMethods
+                            if (!signInMethods.isNullOrEmpty()) {
+                                Toast.makeText(this, "Email already exists", Toast.LENGTH_SHORT)
+                                    .show()
+                            } else {
+                                // Proceed with creating the user as the email is not in use
+                                fAuth.createUserWithEmailAndPassword(mEmail, mPassword)
+                                    .addOnCompleteListener {
+                                        if (it.isSuccessful) {
+                                            val user: FirebaseUser? = fAuth.currentUser
+                                            val df: DocumentReference =
+                                                fStore.collection("Users").document(user!!.uid)
+                                            val userInfo: HashMap<String, Any> = HashMap()
+                                            userInfo["FullName"] = fullName.text.toString()
+                                            userInfo["Email"] = email.text.toString()
+                                            userInfo["Password"] = password.text.toString()
+                                            userInfo["isAdmin"] = "0"
+                                            userInfo["Status"] = "Enabled"
+                                            userInfo["Birthday"] = "Unknown"
+                                            userInfo["Gender"] = "Unknown"
+                                            userInfo["CreatedTime"] = SimpleDateFormat(
+                                                "yyyy-MM-dd HH:mm:ss",
+                                                Locale.getDefault()
+                                            ).format(
+                                                Date()
+                                            )
+                                            //Get the time when the account is created
+                                            df.set(userInfo)
+                                            startActivity(Intent(this, LoginActivity::class.java))
+                                            Toast.makeText(
+                                                this,
+                                                "Account created successfully",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                            finish()
+                                        } else {
+                                            Toast.makeText(
+                                                this,
+                                                it.exception?.message,
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
                                     }
-                                }
+                            }
                         }
+                    } else {
+                        Toast.makeText(this, "Passwords don't match", Toast.LENGTH_SHORT).show()
                     }
                 } else {
-                    Toast.makeText(this, "Passwords don't match", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        this,
+                        "Password must be between 8 and 14 characters",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    password.text.clear()
+                    confirmPassword.text.clear()
                 }
             } else {
                 Toast.makeText(this, "Empty fields are not allowed!", Toast.LENGTH_SHORT).show()
@@ -104,6 +133,8 @@ class RegisterActivity : AppCompatActivity() {
         return valid
     }
 
+    private fun convertServerTimeStamp() {
 
+    }
 
 }

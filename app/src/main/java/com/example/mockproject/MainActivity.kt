@@ -203,7 +203,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         }
 
         mChangePasswordFragment = ChangePasswordFragment()
-        mChangePasswordFragment.setToolbarTitleListener(this)
+//        mChangePasswordFragment.setToolbarTitleListener(this)
         mChangePassBtn.setOnClickListener {
             supportFragmentManager.beginTransaction().apply {
                 add(

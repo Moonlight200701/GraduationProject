@@ -19,6 +19,7 @@ class AccountAdapter(
         RecyclerView.ViewHolder(itemView) {
         private val accountName: TextView = itemView.findViewById(R.id.frg_account_username)
         private val accountEmail: TextView = itemView.findViewById(R.id.frg_account_email)
+        private val accountStatus: TextView = itemView.findViewById(R.id.frg_account_status)
         private val disableButton: AppCompatButton =
             itemView.findViewById(R.id.frg_account_disableBtn)
         private val deleteButton: AppCompatButton =
@@ -28,6 +29,7 @@ class AccountAdapter(
             val account = accountList[position]
             accountName.text = account.userName
             accountEmail.text = account.email
+            accountStatus.text = "Status: ${account.status}"
             //Button
             disableButton.tag = position
             deleteButton.tag = position

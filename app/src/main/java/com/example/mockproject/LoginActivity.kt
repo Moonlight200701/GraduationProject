@@ -52,7 +52,7 @@ class LoginActivity : AppCompatActivity() {
             val mEmail = email.text.toString().trim()
             val mPassword = password.text.toString().trim()
             if (mEmail.isNotEmpty() && mPassword.isNotEmpty()) {
-                fAuth.signInWithEmailAndPassword(email.text.toString(), mPassword)
+                fAuth.signInWithEmailAndPassword(mEmail, mPassword)
                     .addOnCompleteListener {
                         if (it.isSuccessful) {
 //                        Toast.makeText(this,"Logged in successfully", Toast.LENGTH_SHORT).show()

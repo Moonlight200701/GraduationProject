@@ -50,7 +50,18 @@ class AdminFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
                     val birthday = document.getString("Birthday") ?: "Unknown"
                     val gender = document.getString("Gender") ?: "Unknown"
                     val status = document.getString("Status") ?: "Unknown"
-                    accountList.add(Account(id, fullName, email, birthday, gender, status))
+                    val createdTime = document.getString("CreatedTime") ?: "Unknown"
+                    accountList.add(
+                        Account(
+                            id,
+                            fullName,
+                            email,
+                            birthday,
+                            gender,
+                            status,
+                            createdTime
+                        )
+                    )
                 }
             }
         mAccountRecyclerView = view.findViewById(R.id.frg_admin_recyclerview)
@@ -89,12 +100,14 @@ class AdminFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
         val accountEmail = dialogView.findViewById<TextView>(R.id.detail_dialog_email_tv)
         val accountBirthday = dialogView.findViewById<TextView>(R.id.detail_dialog_birthday_tv)
         val accountGender = dialogView.findViewById<TextView>(R.id.detail_dialog_gender_tv)
+        val accountTimeCreated = dialogView.findViewById<TextView>(R.id.detail_dialog_timeCreated_tv)
 
         // Create the dialog builder
         accountName.text = account.userName
         accountEmail.text = "Email: ${account.email}"
         accountBirthday.text = "Birthday: ${account.birthdayDate}"
         accountGender.text = "Gender: ${account.gender}"
+        accountTimeCreated.text = "Time Created: ${account.createdTime}"
 
         val dialogBuilder = AlertDialog.Builder(context)
         dialogBuilder.setView(dialogView)

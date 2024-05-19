@@ -39,18 +39,19 @@ class DatabaseOpenHelper(
         // SQL statement to create movie table
         
         val createTableMovie = "CREATE TABLE $MOVIE_TABLE ( " +
-                "$MOVIE_ID INTEGER PRIMARY KEY," +
+                "$MOVIE_ID INTEGER," +
                 "$MOVIE_TITLE TEXT," +
                 "$MOVIE_OVERVIEW TEXT, " +
                 "$MOVIE_RATING REAL, " +
                 "$MOVIE_DATE TEXT, " +
                 "$MOVIE_IMAGE_POSTER TEXT, " +
                 "$MOVIE_ADULT INTEGER, " +
-                "$MOVIE_FAVORITE INTEGER," +
-                "$USER_ID TEXT)"
+                "$MOVIE_FAVORITE INTEGER, " +
+                "$USER_ID TEXT, " +
+                "PRIMARY KEY($MOVIE_ID, $USER_ID))"
         // SQL statement to create reminder table
         val createTableReminder = "CREATE TABLE $REMINDER_TABLE ( " +
-                "$MOVIE_ID INTEGER PRIMARY KEY," +
+                "$MOVIE_ID INTEGER," +
                 "$MOVIE_TITLE TEXT," +
                 "$MOVIE_OVERVIEW TEXT, " +
                 "$MOVIE_RATING REAL, " +
@@ -60,7 +61,8 @@ class DatabaseOpenHelper(
                 "$MOVIE_FAVORITE INTEGER," +
                 "$REMINDER_TIME TEXT," +
                 "$REMINDER_TIME_DISPLAY TEXT," +
-                "$USER_ID TEXT)"
+                "$USER_ID TEXT, " +
+                "PRIMARY KEY($MOVIE_ID, $USER_ID))"
         //SQL statement to create a genres table
         val createTableMovieGenres = "CREATE TABLE $GENRE_TABLE ( " +
                 "$MOVIE_ID INTEGER," +
@@ -218,13 +220,14 @@ class DatabaseOpenHelper(
         return recordCount
     }
 
-    fun deleteMovie(id: Int): Int {
+    fun deleteMovie(id: Int, userId: String): Int {
         val db = this.writableDatabase
         val contentValues = ContentValues()
         contentValues.put(MOVIE_ID, id)
+        contentValues.put(USER_ID, userId)
 
         //Delete from the Movie Table
-        val recordCount = db.delete(MOVIE_TABLE, "$MOVIE_ID = $id", null)
+        val recordCount = db.delete(MOVIE_TABLE, "$MOVIE_ID = ? AND $USER_ID = ? ", arrayOf(id.toString(), userId))
 
         //Delete the movie from the genre table
         db.delete(GENRE_TABLE, "$MOVIE_ID = $id", null)
@@ -305,5 +308,14 @@ class DatabaseOpenHelper(
             } while (cursor.moveToNext())
         }
         return movieReminderList
+    }
+
+    fun deleteMovieByUser(userId: String): Int {
+        val db = this.writableDatabase
+        val contentValues = ContentValues()
+        contentValues.put(USER_ID, userId)
+        val recordCount = db.delete(MOVIE_TABLE," $USER_ID = $userId", null)
+        db.delete(REMINDER_TABLE, "$USER_ID = $userId", null)
+        return 0
     }
 }

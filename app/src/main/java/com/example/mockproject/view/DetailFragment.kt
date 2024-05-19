@@ -179,7 +179,7 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
                     val favoritesRef =
                         db.collection("Users").document(userId).collection("Favorites")
                     if (mMovie.isFavorite) {
-                        mDatabaseOpenHelper.deleteMovie(mMovie.id)
+                        mDatabaseOpenHelper.deleteMovie(mMovie.id, userId)
                         favoritesRef.document(mMovie.id.toString()).delete()
                             .addOnSuccessListener {
                                 mMovie.isFavorite = false

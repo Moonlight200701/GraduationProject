@@ -6,5 +6,6 @@ data class Account(
     val email: String,
     val birthdayDate: String,
     val gender: String,
-    var status: String
+    var status: String,
+    val createdTime: String
 )
