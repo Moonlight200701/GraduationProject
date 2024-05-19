@@ -39,5 +39,15 @@
     <string name="change">Change</string>
     <string name="new_password">New password</string>
     <string name="sample_name">Ex: Danny</string>
+    <string name="movie">Movie</string>
+    <string name="favorite">Favorite</string>
+    <string name="setting">Setting</string>
+    <string name="recommend_for_you">Recommend for you</string>
+    <string name="change_view">Change view</string>
+    <string name="search">Search</string>
+    <string name="example_email">Ex: Example@gmail.com</string>
+    <string name="disable_account">Disable Account</string>
+    <string name="enable_account">Enable Account</string>
+    <string name="delete_account">Delete Account</string>
 
 </resources>

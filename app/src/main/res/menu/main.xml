@@ -4,33 +4,33 @@
     <item
         android:id="@+id/action_movie"
         android:orderInCategory="100"
-        android:title="Movie"
+        android:title="@string/movie"
         app:showAsAction="never" />
     <item
         android:id="@+id/action_favorite"
         android:orderInCategory="100"
-        android:title="Favorite"
+        android:title="@string/favorite"
         app:showAsAction="never" />
     <item
         android:id="@+id/action_setting"
         android:orderInCategory="100"
-        android:title="Setting"
+        android:title="@string/setting"
         app:showAsAction="never" />
     <item
         android:id="@+id/action_about"
         android:orderInCategory="100"
-        android:title="About"
+        android:title="@string/recommend_for_you"
         app:showAsAction="never" />
     <item
         android:id="@+id/change_view"
         android:icon="@drawable/ic_view_grid_24"
         android:orderInCategory="100"
-        android:title="Change view"
+        android:title="@string/change_view"
         app:showAsAction="ifRoom" />
     <item
         android:id="@+id/action_search"
         android:icon="@drawable/ic_search"
-        android:title="Search"
+        android:title="@string/search"
         app:actionViewClass="androidx.appcompat.widget.SearchView"
         app:showAsAction="ifRoom|collapseActionView"/>
 </menu>

@@ -36,5 +36,11 @@ class Constant {
         const val GENRE_ID_KEY = "genres_ids"
         const val ACTOR_KEY = "actors"
         const val VOTE_AVERAGE_KEY = "vote_average"
+
+        //Firebase
+        const val COLLECTION_NAME = "Users"
+
+        //Log Tag
+        const val FIREBASE_ADD_TAG = "firebase_add"
     }
 }

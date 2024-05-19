@@ -52,6 +52,7 @@ import com.example.mockproject.listenercallback.ToolbarTitleListener
 import com.example.mockproject.model.Movie
 import com.example.mockproject.util.BitmapConverter
 import com.example.mockproject.view.AboutFragment
+import com.example.mockproject.view.AdminFragment
 import com.example.mockproject.view.ChangePasswordFragment
 import com.example.mockproject.view.DetailFragment
 import com.example.mockproject.view.EditProfileFragment
@@ -95,6 +96,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
     private lateinit var mEditProfileFragment: EditProfileFragment
     private lateinit var mReminderFragment: ReminderFragment
     private lateinit var mChangePasswordFragment: ChangePasswordFragment
+    private lateinit var mAdminFragment: AdminFragment
 
     // Navigation view
     private lateinit var mProfileSharedPreferences: SharedPreferences
@@ -115,7 +117,10 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
 
     //Firebase
     private var fAuth = FirebaseAuth.getInstance()
-    private val user = fAuth.currentUser
+    private val mUser = fAuth.currentUser
+    private val fStore = FirebaseFirestore.getInstance()
+    private val mDocRef = fStore.collection("Users").document(mUser!!.uid)
+
     private var backPressedCount = 0
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -125,11 +130,8 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
 
         //Firebase
         var userId = ""
-        if(user != null) {
-            userId = user.uid
-            val db = FirebaseFirestore.getInstance()
-            val favoritesRef =
-                db.collection("Users").document(userId).collection("Favorites")
+        if (mUser != null) {
+            userId = mUser.uid
         }
         mTabTitleList = mutableListOf(
             "Movie", "Favorite", "Setting", "Suggest", "Accounts"
@@ -138,11 +140,13 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
             R.drawable.ic_home_24,
             R.drawable.ic_favorite_24,
             R.drawable.ic_settings_24,
-            R.drawable.ic_about_24
+            R.drawable.ic_about_24,
+            R.drawable.ic_admin_24
         )
         getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         mProfileSharedPreferences = getSharedPreferences(PROFILE_PREF, MODE_PRIVATE)
 
+        //Get the stored movie
         mDatabaseOpenHelper = DatabaseOpenHelper(this, null)
         mMovieReminderList = mDatabaseOpenHelper.getListReminder(userId)
         mMovieFavouriteList = mDatabaseOpenHelper.getListMovie(userId)
@@ -177,6 +181,8 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         mReminderFragment.setToolbarTitleListener(this)
         mReminderFragment.setRemindListener(this)
 
+        mAdminFragment = AdminFragment(mDatabaseOpenHelper)
+
         setUpTabs()
         setUpDrawerLayout()
 
@@ -189,6 +195,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         mEditBtn = mHeaderLayout.findViewById(R.id.btn_edit_profile)
         mLogOutBtn = mHeaderLayout.findViewById(R.id.btn_log_out)
         mChangePassBtn = mHeaderLayout.findViewById(R.id.btn_change_password)
+
         mLogOutBtn.setOnClickListener {
             FirebaseAuth.getInstance().signOut()
             startActivity(Intent(this, LoginActivity::class.java))
@@ -274,11 +281,11 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         }
         createNotificationChannel()
 
-        val userName = intent.getStringExtra("Username")
-        mNameText.text = userName
-        val email = intent.getStringExtra("Email")
-        mEmailText.text = email
-        val isAdmin = intent.getStringExtra("isAdmin")
+//        val userName = intent.getStringExtra("Username")
+//        mNameText.text = userName
+//        val email = intent.getStringExtra("Email")
+//        mEmailText.text = email
+//        val isAdmin = intent.getStringExtra("isAdmin")
 //
 
     }
@@ -452,14 +459,16 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
     ) {
         supportActionBar!!.title = mTabTitleList[0]
         val edit = mProfileSharedPreferences.edit()
-        if (avatarBitmap != null)
+        if (avatarBitmap != null) {
             edit.putString(Constant.PROFILE_AVATAR_KEY, mBitmapConverter.encodeBase64(avatarBitmap))
-        edit.putString(Constant.PROFILE_NAME_KEY, name)
-        edit.putString(Constant.PROFILE_EMAIL_KEY, email)
-        edit.putString(Constant.PROFILE_BIRTHDAY_KEY, birthday)
-        edit.putBoolean(Constant.PROFILE_GENDER_KEY, isMale)
+        }
+//        edit.putString(Constant.PROFILE_NAME_KEY, name)
+//        edit.putString(Constant.PROFILE_EMAIL_KEY, email)
+//        edit.putString(Constant.PROFILE_BIRTHDAY_KEY, birthday)
+//        edit.putBoolean(Constant.PROFILE_GENDER_KEY, isMale)
         edit.apply()
 
+        //Update UI
         mAvatarImg.setImageBitmap(avatarBitmap)
         mNameText.text = mProfileSharedPreferences.getString(
             Constant.PROFILE_NAME_KEY,
@@ -471,6 +480,25 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
             mGenderText.text = Constant.GENDER_MALE
         } else {
             mGenderText.text = Constant.GENDER_FEMALE
+        }
+
+        val profile = hashMapOf(
+            "FullName" to name,
+            "Email" to email,
+            "Birthday" to mBirthDayText.text,
+            "Gender" to mGenderText.text,
+        )
+
+        mDocRef.get().addOnSuccessListener { documentSnapshot ->
+            if (documentSnapshot.exists()) {
+                mDocRef.update(profile as Map<String, Any>).addOnSuccessListener {
+                    Log.d(Constant.FIREBASE_ADD_TAG, "Updated successfully")
+                }.addOnFailureListener {
+                    Log.d(Constant.FIREBASE_ADD_TAG, "Updated failed")
+                }
+            } else {
+                Log.d(Constant.FIREBASE_ADD_TAG, "Document not exists")
+            }
         }
     }
 
@@ -506,10 +534,14 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         mViewPagerAdapter.addFragment(mMovieFragment, "Movie")
         if (isAdmin == "0") {
             mViewPagerAdapter.addFragment(mFavoriteFragment, "Favorite")
-        } else {
-            mViewPagerAdapter.addFragment(mSettingFragment, "Setting")
         }
+        mViewPagerAdapter.addFragment(mSettingFragment, "Setting")
+
         mViewPagerAdapter.addFragment(mAboutFragment, "Suggest")
+
+        if (isAdmin == "1") {
+            mViewPagerAdapter.addFragment(mAdminFragment, "Accounts")
+        }
         mViewPager.offscreenPageLimit = 4
 
         mViewPager.adapter = mViewPagerAdapter
@@ -523,6 +555,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
             val iconTab = tabView.findViewById<ImageView>(R.id.tab_icon)
 
             if (isAdmin == "0") {
+                //If this is a normal user:
                 when (index) {
                     1 -> {
                         val badgeText = tabView.findViewById<TextView>(R.id.tab_badge)
@@ -532,10 +565,10 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
                         iconTab.setImageResource(mTabIconList[index])
                     }
 
-                    2 -> {
-                        titleTab.text = mTabTitleList[index + 1]
-                        iconTab.setImageResource(mTabIconList[index + 1])
-                    }
+//                    2 -> {
+//                        titleTab.text = mTabTitleList[index + 1]
+//                        iconTab.setImageResource(mTabIconList[index + 1])
+//                    }
 
                     else -> {
                         titleTab.text = mTabTitleList[index]
@@ -557,6 +590,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         setTitleFragment()
     }
 
+    //Reset the title when moving to another fragment in the viewpager2
     private fun setTitleFragment() {
         val isAdmin = intent.getStringExtra("isAdmin")
         mViewPager.addOnPageChangeListener(object : OnPageChangeListener {
@@ -570,7 +604,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
             override fun onPageSelected(position: Int) {
                 mTabLayout.nextFocusRightId = position
                 val adjustedPosition =
-                    if (isAdmin == "1" && position > 0) position + 1 else if (isAdmin == "0" && position > 1) position + 1 else position
+                    if (isAdmin == "1" && position > 0) position + 1 else position
                 supportActionBar!!.title = mTabTitleList[adjustedPosition]
             }
 
@@ -592,32 +626,42 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         } catch (e: Exception) {
             mAvatarImg.setImageResource(R.drawable.ic_person_24)
         }
-        mNameText.text = mProfileSharedPreferences.getString(
-            Constant.PROFILE_NAME_KEY,
-            Constant.PROFILE_NAME_DEFAULT
-        )
-        mEmailText.text = mProfileSharedPreferences.getString(
-            Constant.PROFILE_EMAIL_KEY,
-            Constant.PROFILE_EMAIL_DEFAULT
-        )
-        mBirthDayText.text = mProfileSharedPreferences.getString(
-            Constant.PROFILE_BIRTHDAY_KEY,
-            Constant.PROFILE_BIRTHDAY_DEFAULT
-        )
-        if (mProfileSharedPreferences.getBoolean(
-                Constant.PROFILE_GENDER_KEY, false
-            )
-        ) {
-            mGenderText.text = Constant.GENDER_MALE
-        } else {
-            mGenderText.text = Constant.GENDER_FEMALE
-        }
+//        mNameText.text = mProfileSharedPreferences.getString(
+//            Constant.PROFILE_NAME_KEY,
+//            Constant.PROFILE_NAME_DEFAULT
+//        )
+//        mEmailText.text = mProfileSharedPreferences.getString(
+//            Constant.PROFILE_EMAIL_KEY,
+//            Constant.PROFILE_EMAIL_DEFAULT
+//        )
+//        mBirthDayText.text = mProfileSharedPreferences.getString(
+//            Constant.PROFILE_BIRTHDAY_KEY,
+//            Constant.PROFILE_BIRTHDAY_DEFAULT
+//        )
+//        if (mProfileSharedPreferences.getBoolean(
+//                Constant.PROFILE_GENDER_KEY, false
+//            )
+//        ) {
+//            mGenderText.text = Constant.GENDER_MALE
+//        } else {
+//            mGenderText.text = Constant.GENDER_FEMALE
+//        }
+
+        val userName = intent.getStringExtra("Username")
+        mNameText.text = userName
+        val email = intent.getStringExtra("Email")
+        mEmailText.text = email
+        val isAdmin = intent.getStringExtra("isAdmin")
+        val birthday = intent.getStringExtra("Birthday") ?: "2023/01/01"
+        mBirthDayText.text = birthday
+        val gender = intent.getStringExtra("Gender") ?: "Unknown"
+        mGenderText.text = gender
     }
 
     private fun loadReminderList() {
         var userId = ""
-        if(user != null){
-            userId = user.uid
+        if (mUser != null) {
+            userId = mUser.uid
         }
         mMovieReminderList = mDatabaseOpenHelper.getListReminder(userId)
         if (mMovieReminderList.isEmpty()) {
@@ -668,8 +712,11 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
     }
 
     override fun fromFavoriteToRecommendation(movieList: ArrayList<Movie>) {
-        val aboutFragment = mViewPagerAdapter.getItem(2) as AboutFragment
-        aboutFragment.displayReceivedMovieFavoriteList(movieList)
+        val isAdmin = intent.getStringExtra("isAdmin")
+        if (isAdmin == "0") {
+            val aboutFragment = mViewPagerAdapter.getItem(3) as AboutFragment
+            aboutFragment.displayReceivedMovieFavoriteList(movieList)
+        }
     }
     //pass the favorite list from the Favorite Fragment to the About Fragment aka the Suggest Fragment
 }

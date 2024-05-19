@@ -40,7 +40,8 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:hint="Email"
-        android:textSize="16sp" />
+        android:textSize="16sp"
+        android:enabled="false"/>
 
     <TextView
         android:id="@+id/birthday_text"
@@ -96,4 +97,11 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:text="Save" />
+
+    <Button
+        android:id="@+id/btn_cancel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:text="Cancel" />
 </LinearLayout>

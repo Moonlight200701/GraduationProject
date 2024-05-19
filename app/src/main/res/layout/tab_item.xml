@@ -25,7 +25,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:src="@drawable/ic_favorite_24" />
+            android:src="@drawable/ic_favorite_24"
+            />
 <!--        For the Favorite number of films (see that red circle on the top of the icon?)-->
     </RelativeLayout>
 

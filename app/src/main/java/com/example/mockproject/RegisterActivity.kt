@@ -21,7 +21,7 @@ class RegisterActivity : AppCompatActivity() {
     private lateinit var goToLogin: Button
     private var valid = true
 
-    private lateinit var auth: FirebaseAuth
+    private lateinit var fAuth: FirebaseAuth
     private lateinit var fStore: FirebaseFirestore
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,7 +39,7 @@ class RegisterActivity : AppCompatActivity() {
         checkField(password)
         checkField(confirmPassword)
 
-        auth = FirebaseAuth.getInstance()
+        fAuth = FirebaseAuth.getInstance()
         fStore = FirebaseFirestore.getInstance()
 
         goToLogin.setOnClickListener {
@@ -47,46 +47,50 @@ class RegisterActivity : AppCompatActivity() {
         }
 
         registerBtn.setOnClickListener {
-            try {
-                val mEmail = email.text.toString()
-                val mPassword = password.text.toString()
-                val mConfirmPassword = confirmPassword.text.toString()
+            val mEmail = email.text.toString()
+            val mPassword = password.text.toString()
+            val mConfirmPassword = confirmPassword.text.toString()
 
-                if (mEmail.isNotEmpty() && mPassword.isNotEmpty() && mConfirmPassword.isNotEmpty()) {
-                    if (mPassword == mConfirmPassword) {
-                        auth.createUserWithEmailAndPassword(mEmail, mPassword)
-                            .addOnCompleteListener {
-                                if (it.isSuccessful) {
-                                    val user: FirebaseUser? = auth.currentUser
-                                    val df: DocumentReference =
-                                        fStore.collection("Users").document(user!!.uid)
-                                    val userInfo: HashMap<String, Any> = HashMap()
-                                    userInfo["FullName"] = fullName.text.toString()
-                                    userInfo["Email"] = email.text.toString()
-                                    userInfo["Password"] = password.text.toString()
-                                    userInfo["isAdmin"] = "0"
-                                    df.set(userInfo)
-                                    startActivity(Intent(this, LoginActivity::class.java))
-                                    finish()
-                                } else {
-                                    Toast.makeText(
-                                        this,
-                                        "Password doesn't match",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
+            if (mEmail.isNotEmpty() && mPassword.isNotEmpty() && mConfirmPassword.isNotEmpty()) {
+                if (mPassword == mConfirmPassword) {
+                    fAuth.fetchSignInMethodsForEmail(mEmail).addOnCompleteListener { task ->
+                        val signInMethods = task.result?.signInMethods
+                        if (!signInMethods.isNullOrEmpty()) {
+                            Toast.makeText(this, "Email already exists", Toast.LENGTH_SHORT).show()
+                        } else {
+                            // Proceed with creating the user as the email is not in use
+                            fAuth.createUserWithEmailAndPassword(mEmail, mPassword)
+                                .addOnCompleteListener {
+                                    if (it.isSuccessful) {
+                                        val user: FirebaseUser? = fAuth.currentUser
+                                        val df: DocumentReference =
+                                            fStore.collection("Users").document(user!!.uid)
+                                        val userInfo: HashMap<String, Any> = HashMap()
+                                        userInfo["FullName"] = fullName.text.toString()
+                                        userInfo["Email"] = email.text.toString()
+                                        userInfo["Password"] = password.text.toString()
+                                        userInfo["isAdmin"] = "0"
+                                        userInfo["Status"] = "Enabled"
+                                        userInfo["Birthday"] = "Unknown"
+                                        userInfo["Gender"] = "Unknown"
+                                        df.set(userInfo)
+                                        startActivity(Intent(this, LoginActivity::class.java))
+                                        Toast.makeText(this, "Create a new account successfully", Toast.LENGTH_SHORT).show()
+                                        finish()
+                                    } else {
+                                        Toast.makeText(this, it.exception?.message, Toast.LENGTH_SHORT).show()
+                                    }
                                 }
-                            }
-                    } else {
-                        Toast.makeText(this, "Password doesn't match", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 } else {
-                    Toast.makeText(this, "Empty fields are not allowed !", Toast.LENGTH_SHORT)
-                        .show()
+                    Toast.makeText(this, "Passwords don't match", Toast.LENGTH_SHORT).show()
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
+            } else {
+                Toast.makeText(this, "Empty fields are not allowed!", Toast.LENGTH_SHORT).show()
             }
         }
+
     }
 
 
@@ -99,4 +103,7 @@ class RegisterActivity : AppCompatActivity() {
         }
         return valid
     }
+
+
+
 }

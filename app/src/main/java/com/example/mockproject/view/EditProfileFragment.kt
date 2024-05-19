@@ -26,6 +26,8 @@ import com.example.mockproject.constant.Constant.Companion.PROFILE_AVATAR_KEY
 import com.example.mockproject.listenercallback.ProfileListener
 import com.example.mockproject.listenercallback.ToolbarTitleListener
 import com.example.mockproject.util.BitmapConverter
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import java.util.Calendar
 
 class EditProfileFragment : Fragment() {
@@ -37,6 +39,7 @@ class EditProfileFragment : Fragment() {
     private lateinit var mRadioMale: RadioButton
     private lateinit var mRadioFemale: RadioButton
     private lateinit var mSaveBtn: Button
+    private lateinit var mCancelBtn: Button
 
     private val mCameraResultLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
@@ -50,8 +53,13 @@ class EditProfileFragment : Fragment() {
     private var mProfileBitmap: Bitmap? = null
     private var mIsMale: Boolean = false
 
+
     private lateinit var mToolbarTitleListener: ToolbarTitleListener
     private lateinit var mProfileListener: ProfileListener
+
+    //Firebase
+    private var fAuth = FirebaseAuth.getInstance()
+    private val user: FirebaseUser? = fAuth.currentUser
 
     fun setToolbarTitleListener(toolbarTitleListener: ToolbarTitleListener) {
         this.mToolbarTitleListener = toolbarTitleListener
@@ -98,8 +106,12 @@ class EditProfileFragment : Fragment() {
             } else {
                 mProfileListener.onSaveProfile(name, email, birthday, mIsMale, mProfileBitmap)
                 requireActivity().supportFragmentManager.beginTransaction().remove(this).commit()
-                Toast.makeText(context, "Save changes successfully", Toast.LENGTH_SHORT).show()
+//                Toast.makeText(context, "Save changes successfully", Toast.LENGTH_SHORT).show()
             }
+        }
+        mCancelBtn = view.findViewById(R.id.btn_cancel)
+        mCancelBtn.setOnClickListener {
+            requireActivity().supportFragmentManager.popBackStack()
         }
 
         val bundle = arguments

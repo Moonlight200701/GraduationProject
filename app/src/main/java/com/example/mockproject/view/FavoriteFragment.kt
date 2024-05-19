@@ -1,5 +1,6 @@
 package com.example.mockproject.view
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -74,6 +75,7 @@ class FavoriteFragment(
     }
 
 
+    @SuppressLint("NotifyDataSetChanged")
     override fun onClick(view: View) {
         when (view.id) {
             R.id.item_list_favourite_image_button -> {

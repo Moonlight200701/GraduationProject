@@ -98,8 +98,10 @@ class AboutFragment : Fragment(), View.OnClickListener, OnDataLoaded {
 //        val mMovieFavoriteData = arguments?.getSerializable("My favorite list") as? ArrayList<*>
 //        Log.d("Movie From Favorite", mMovieFavorite.toString())
 
-        //For showing the admin the list of movie for recommendation
+        //Get the dataSet
         getSomeMovieForRecommendation()
+
+        //Initialize the recommendationList
         mRecommendationList.layoutManager = LinearLayoutManager(context)
         mMovieRecommendationAdapter = RecommendationAdapter(mutableListOf(), this)
         mRecommendationList.adapter = mMovieRecommendationAdapter
@@ -117,18 +119,16 @@ class AboutFragment : Fragment(), View.OnClickListener, OnDataLoaded {
             RetrofitClient().getRetrofitInstance().create(ApiInterface::class.java)
 
         // Create a new coroutine to run the network requests
-        lifecycleScope.launch {
+        CoroutineScope(Dispatchers.IO).launch {
             val deferredList = mutableListOf<Deferred<Unit>>()
-            for (page in 3..6) {
-                val deferred = async(Dispatchers.IO) {
+            for (page in 1..6) {
+                val deferred = async {
                     try {
                         val response = retrofit.getMovieListRecommendation("popular", APIConstant.API_KEY, page.toString()).execute()
-
                         if (response.isSuccessful) {
                             val responseBody = response.body()
                             val movieGotFromAPI = responseBody?.results as ArrayList<Movie>
                             mMovieListFromApi.addAll(movieGotFromAPI)
-
                         }
                     } catch (e: Exception) {
                         withContext(Dispatchers.Main) {
@@ -140,9 +140,7 @@ class AboutFragment : Fragment(), View.OnClickListener, OnDataLoaded {
             }
             deferredList.awaitAll()
             Log.d("How many movies?", mMovieListFromApi.size.toString())
-            // Notify adapter once data is fully loaded
             getCastAndCrewOfThoseMovies()
-            mMovieRecommendationAdapter.notifyDataSetChanged()
         }
     }
 
@@ -304,7 +302,9 @@ class AboutFragment : Fragment(), View.OnClickListener, OnDataLoaded {
             val genreIds = movieData[Constant.GENRE_ID_KEY] as List<*>
             val actors = movieData[Constant.ACTOR_KEY] as List<*>
 //                val rating = movieData[Constant.VOTE_AVERAGE_KEY] as Double
-
+            if(movieId in movieFavoriteList) {
+                continue
+            }
             for ((_, favMovieData) in movieFavoriteList) {
                 val favGenreIds = favMovieData[Constant.GENRE_ID_KEY] as List<*>
                 val favActors = favMovieData[Constant.ACTOR_KEY] as List<*>

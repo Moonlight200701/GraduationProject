@@ -30,7 +30,7 @@ class RecommendationAdapter(
 
     override fun onBindViewHolder(holder: ListViewHolder, position: Int) {
         holder.bindDataList(position)
-        holder.itemView.setOnClickListener(mViewClickListener)
+        holder.itemView.setOnClickListener( mViewClickListener)
     }
 
     inner class ListViewHolder(itemView: View, private val mViewClickListener: OnClickListener) :

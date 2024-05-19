@@ -21,6 +21,7 @@ interface ApiInterface {
         @Query("api_key") apiKey: String
     ): Call<CastCrewList>
 
+    //For searching the movie
     @GET("3/search/movie")
     fun searchMovie(
         @Query("query") query: String,

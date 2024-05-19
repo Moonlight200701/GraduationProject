@@ -92,28 +92,32 @@ class MovieAdapter(
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-        return if (viewType == TYPE_LIST) {
-            ListViewHolder(
-                mViewClickListener, mMovieList,
-                LayoutInflater.from(parent.context)
-                    .inflate(R.layout.movie_item_list, parent, false)
-            )
-        } else if (viewType == TYPE_GRID) {
-            GridViewHolder(
-                mMovieList,
-                LayoutInflater.from(parent.context)
-                    .inflate(R.layout.movie_item_grid, parent, false)
-            )
-        } else if (viewType == TYPE_LOADING_LIST) {
-            LoadListViewHolder(
-                LayoutInflater.from(parent.context)
-                    .inflate(R.layout.movie_item_load_list, parent, false)
-            )
-        } else
-            LoadGridViewHolder(
+        return when (viewType) {
+            TYPE_LIST -> {
+                ListViewHolder(
+                    mViewClickListener, mMovieList,
+                    LayoutInflater.from(parent.context)
+                        .inflate(R.layout.movie_item_list, parent, false)
+                )
+            }
+            TYPE_GRID -> {
+                GridViewHolder(
+                    mMovieList,
+                    LayoutInflater.from(parent.context)
+                        .inflate(R.layout.movie_item_grid, parent, false)
+                )
+            }
+            TYPE_LOADING_LIST -> {
+                LoadListViewHolder(
+                    LayoutInflater.from(parent.context)
+                        .inflate(R.layout.movie_item_load_list, parent, false)
+                )
+            }
+            else -> LoadGridViewHolder(
                 LayoutInflater.from(parent.context)
                     .inflate(R.layout.movie_item_load_grid, parent, false)
             )
+        }
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
@@ -180,4 +184,9 @@ class MovieAdapter(
 
     class LoadListViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
     class LoadGridViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
+
+    //Animation
+    override fun onViewDetachedFromWindow(holder: RecyclerView.ViewHolder) {
+        super.onViewDetachedFromWindow(holder)
+    }
 }
