@@ -36,8 +36,8 @@ class DatabaseOpenHelper(
     }
 
     override fun onCreate(db: SQLiteDatabase) {
+
         // SQL statement to create movie table
-        
         val createTableMovie = "CREATE TABLE $MOVIE_TABLE ( " +
                 "$MOVIE_ID INTEGER," +
                 "$MOVIE_TITLE TEXT," +
@@ -49,6 +49,7 @@ class DatabaseOpenHelper(
                 "$MOVIE_FAVORITE INTEGER, " +
                 "$USER_ID TEXT, " +
                 "PRIMARY KEY($MOVIE_ID, $USER_ID))"
+
         // SQL statement to create reminder table
         val createTableReminder = "CREATE TABLE $REMINDER_TABLE ( " +
                 "$MOVIE_ID INTEGER," +
@@ -63,6 +64,7 @@ class DatabaseOpenHelper(
                 "$REMINDER_TIME_DISPLAY TEXT," +
                 "$USER_ID TEXT, " +
                 "PRIMARY KEY($MOVIE_ID, $USER_ID))"
+
         //SQL statement to create a genres table
         val createTableMovieGenres = "CREATE TABLE $GENRE_TABLE ( " +
                 "$MOVIE_ID INTEGER," +
@@ -209,13 +211,13 @@ class DatabaseOpenHelper(
         return recordCount
     }
 
-    fun updateReminder(movie: Movie): Int {
+    fun updateReminder(movie: Movie, userId: String): Int {
         val db = this.writableDatabase
         val contentValues = ContentValues()
         contentValues.put(REMINDER_TIME, movie.reminderTime)
         contentValues.put(REMINDER_TIME_DISPLAY, movie.reminderTimeDisplay)
         val recordCount =
-            db.update(REMINDER_TABLE, contentValues, "$MOVIE_ID = ?", arrayOf(movie.id.toString()))
+            db.update(REMINDER_TABLE, contentValues, "$MOVIE_ID = ? AND $USER_ID = ?", arrayOf(movie.id.toString(), userId))
         db.close()
         return recordCount
     }
@@ -310,12 +312,17 @@ class DatabaseOpenHelper(
         return movieReminderList
     }
 
+    //Delete all the user lists
     fun deleteMovieByUser(userId: String): Int {
         val db = this.writableDatabase
         val contentValues = ContentValues()
         contentValues.put(USER_ID, userId)
         val recordCount = db.delete(MOVIE_TABLE," $USER_ID = $userId", null)
         db.delete(REMINDER_TABLE, "$USER_ID = $userId", null)
-        return 0
+        //Delete the movie from the genre table where the movie id of that movie have the userId
+        db.delete(GENRE_TABLE, "$MOVIE_ID IN (SELECT $MOVIE_ID FROM $MOVIE_TABLE WHERE $USER_ID = ?)", arrayOf(userId))
+        return recordCount
     }
+
+
 }

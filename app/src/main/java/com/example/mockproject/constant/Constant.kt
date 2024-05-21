@@ -32,6 +32,7 @@ class Constant {
         const val BUNDLE_TITLE_KEY = "BUNDLE_TITLE_KEY"
         const val BUNDLE_RATE_KEY = "BUNDLE_RATE_KEY"
         const val BUNDLE_RELEASE_KEY = "BUNDLE_RELEASE_KEY"
+        const val BUNDLE_LOCATION_TO_WATCH_KEY = "BUNDLE_LOCATION_TO_WATCH_KEY"
 
         const val GENRE_ID_KEY = "genres_ids"
         const val ACTOR_KEY = "actors"

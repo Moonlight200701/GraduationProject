@@ -1,5 +1,6 @@
 package com.example.mockproject.view
 
+import android.app.AlertDialog
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.os.Build
@@ -10,6 +11,7 @@ import android.view.Menu
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
@@ -72,6 +74,8 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
     //Firebase
     private var fAuth = FirebaseAuth.getInstance()
     private val user: FirebaseUser? = fAuth.currentUser
+    private val fStore = FirebaseFirestore.getInstance()
+    private val df = fStore.collection("Users").document(user!!.uid).collection("Reminder")
 
     fun setToolbarTitleListener(toolbarTitleListener: ToolbarTitleListener) {
         this.mToolbarTitleListener = toolbarTitleListener
@@ -147,11 +151,13 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
 
         val layoutManager = LinearLayoutManager(activity)
         layoutManager.orientation = LinearLayoutManager.HORIZONTAL
+
         mCastAndCrewList = arrayListOf()
         mCastAndCrewAdapter = CastAndCrewAdapter(mCastAndCrewList)
         mCastRecyclerView.layoutManager = layoutManager
         mCastRecyclerView.setHasFixedSize(true)
         mCastRecyclerView.adapter = mCastAndCrewAdapter
+
         getCastAndCrewFromApi()
         setHasOptionsMenu(true)
         return view
@@ -261,6 +267,7 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
         if (user != null) {
             userId = user.uid
         }
+        //Set the current date time to the datepicker and timepicker
         val currentDateTime = Calendar.getInstance()
         val startYear = currentDateTime.get(Calendar.YEAR)
         val startMonth = currentDateTime.get(Calendar.MONTH)
@@ -278,31 +285,84 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
 
                 val monthDisplay = month + 1
                 val reminderTimeDisplay = "$year/$monthDisplay/$day-$hour:$minute"
-                mReminderTimeText.visibility = View.VISIBLE
-                mReminderTimeText.text = reminderTimeDisplay
-                mMovie.reminderTimeDisplay = reminderTimeDisplay
 
-                if (mReminderExisted) {
-                    if (mDatabaseOpenHelper.updateReminder(mMovie) > 0) {
-                        NotificationUtil().cancelNotification(mMovie.id, requireContext())
-                        NotificationUtil().createNotification(
-                            mMovie, reminderTimeInMillis, requireContext()
-                        )
-                        mReminderListener.onLoadReminder()
-                    } else {
-                        Toast.makeText(context, "Update reminder fail", Toast.LENGTH_SHORT).show()
-                    }
-                } else {
-                    if (mDatabaseOpenHelper.addReminder(mMovie, userId) > 0) {
-                        mReminderExisted = true
-                        mReminderListener.onLoadReminder()
-                        NotificationUtil().createNotification(
-                            mMovie, reminderTimeInMillis, requireContext()
-                        )
-                    } else {
-                        Toast.makeText(context, "Add reminder fail", Toast.LENGTH_SHORT).show()
+                //Create the Location dialog, let the user decide where do they want to watch, this can be a cinema, a site...
+                val dialogBuilder = AlertDialog.Builder(context)
+                val dialogView =
+                    LayoutInflater.from(context).inflate(R.layout.reminder_location_dialog, null)
+                val reminderEt = dialogView.findViewById<EditText>(R.id.reminder_dialog_location_et)
+                dialogBuilder.setView(dialogView)
+                dialogBuilder.setCancelable(true)
+                dialogBuilder.setPositiveButton("OK") { _, _ ->
+                    mReminderTimeText.visibility = View.VISIBLE
+                    mReminderTimeText.text = reminderTimeDisplay
+                    mMovie.reminderTimeDisplay = reminderTimeDisplay
+
+                    if (reminderEt.text.trim().isNotEmpty()) {
+                        if (mReminderExisted) {
+                            if (mDatabaseOpenHelper.updateReminder(mMovie, userId) > 0) {
+                                //Adding to the fireStore
+                                val reminderItem = hashMapOf(
+                                    "id" to mMovie.id,
+                                    "title" to mMovie.title,
+                                    "poster path" to mMovie.posterPath,
+                                    "overview" to mMovie.overview,
+                                    "vote average" to mMovie.voteAverage,
+                                    "release date" to mMovie.releaseDate,
+                                    "genre ids" to mMovie.genreIds,
+                                    "adult" to mMovie.adult,
+                                    "reminder time" to mMovie.reminderTimeDisplay
+                                )
+                                df.document(mMovie.id.toString()).update(reminderItem).addOnSuccessListener {
+
+                                }
+                                NotificationUtil().cancelNotification(mMovie.id, requireContext())
+                                NotificationUtil().createNotification(
+                                    mMovie,
+                                    reminderTimeInMillis,
+                                    requireContext(),
+                                    reminderEt.text.toString()
+                                )
+                                mReminderListener.onLoadReminder()
+
+                            } else {
+                                Toast.makeText(context, "Update reminder fail", Toast.LENGTH_SHORT)
+                                    .show()
+                            }
+                        } else {
+                            if (mDatabaseOpenHelper.addReminder(mMovie, userId) > 0) {
+                                mReminderExisted = true
+                                mReminderListener.onLoadReminder()
+
+                                val reminderItem = hashMapOf(
+                                    "id" to mMovie.id,
+                                    "title" to mMovie.title,
+                                    "poster path" to mMovie.posterPath,
+                                    "overview" to mMovie.overview,
+                                    "vote average" to mMovie.voteAverage,
+                                    "release date" to mMovie.releaseDate,
+                                    "genre ids" to mMovie.genreIds,
+                                    "adult" to mMovie.adult,
+                                    "reminder time" to mMovie.reminderTimeDisplay
+                                )
+                                df.document(mMovie.id.toString()).set(reminderItem).addOnSuccessListener {
+
+                                }
+                                NotificationUtil().createNotification(
+                                    mMovie,
+                                    reminderTimeInMillis,
+                                    requireContext(),
+                                    reminderEt.text.toString()
+                                )
+                            } else {
+                                Toast.makeText(context, "Add reminder fail", Toast.LENGTH_SHORT)
+                                    .show()
+                            }
+                        }
                     }
                 }
+                dialogBuilder.setNegativeButton("Cancel", null)
+                dialogBuilder.show()
             }, startHour, startMinute, true).show()
         }, startYear, startMonth, startDay).show()
     }
@@ -316,6 +376,7 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
         super.onStop()
         EventBus.getDefault().unregister(this)
     }
+
 
     /**
      * Delete Reminder when notification pushed

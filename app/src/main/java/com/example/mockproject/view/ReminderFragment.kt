@@ -1,5 +1,6 @@
 package com.example.mockproject.view
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.Menu
@@ -19,6 +20,7 @@ import com.example.mockproject.util.NotificationUtil
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.firestore.FirebaseFirestore
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
@@ -34,6 +36,8 @@ class ReminderFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fr
     //Firebase
     private var fAuth = FirebaseAuth.getInstance()
     private val user: FirebaseUser? = fAuth.currentUser
+    private val fStore = FirebaseFirestore.getInstance()
+    private val df = fStore.collection("Users").document(user!!.uid).collection("Reminder")
 
     fun setToolbarTitleListener(toolbarTitleListener: ToolbarTitleListener) {
         this.mToolbarTitleListener = toolbarTitleListener
@@ -62,6 +66,7 @@ class ReminderFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fr
         item.isVisible = false
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     private fun showDeleteDialog(position: Int) {
         var userId = ""
         if (user != null) {
@@ -76,6 +81,10 @@ class ReminderFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fr
             .setPositiveButton("Yes") { _, _ ->
                 if (mDatabaseOpenHelper.deleteReminderByMovieId(movie.id, userId) > -1) {
                     NotificationUtil().cancelNotification(movie.id, requireContext())
+
+                    //Firestore delete when the User delete the reminder
+                    df.document(movie.id.toString()).delete()
+
                     mReminderList.removeAt(position)
                     mReminderAdapter.notifyDataSetChanged()
                     mReminderListener.onLoadReminder()

@@ -6,6 +6,7 @@ import android.app.AlertDialog
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.Menu
 import android.view.View
 import android.view.View.OnClickListener
 import android.view.ViewGroup
@@ -19,6 +20,7 @@ import com.example.mockproject.constant.Constant
 import com.example.mockproject.database.DatabaseOpenHelper
 import com.example.mockproject.model.Account
 import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.firestore
 
 //Purpose of database param? delete the movie in the local as well if i want to delete the user
@@ -34,7 +36,15 @@ class AdminFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
         savedInstanceState: Bundle?
     ): View? {
         // Inflate the layout for this fragment
+        setHasOptionsMenu(true)
         return inflater.inflate(R.layout.fragment_admin, container, false)
+    }
+
+    override fun onPrepareOptionsMenu(menu: Menu) {
+        val item = menu.findItem(R.id.change_view)
+        val item2 = menu.findItem(R.id.action_search)
+        item.isVisible = false
+        item2.isVisible = false
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -83,10 +93,6 @@ class AdminFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
 
             R.id.frg_account_disableBtn -> handleDisableEnableButtonClick(view)
 
-            R.id.frg_account_deleteBtn -> {
-                Toast.makeText(context, "Deleting :<", Toast.LENGTH_SHORT).show()
-
-            }
         }
     }
 

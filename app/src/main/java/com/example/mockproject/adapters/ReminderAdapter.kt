@@ -15,6 +15,7 @@ class ReminderAdapter(
     private var mReminderList: ArrayList<Movie>,
     private var mReminderType: Int,
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+    //For distinguishing between the reminder in the navigation drawer and the reminder in the reminder fragment
     companion object {
         const val REMINDER_PROFILE = 0
         const val REMINDER_ALL = 1

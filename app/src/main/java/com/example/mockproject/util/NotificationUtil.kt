@@ -13,13 +13,14 @@ import com.example.mockproject.model.Movie
 
 
 class NotificationUtil {
-    fun createNotification(movie: Movie, reminderTime: Long, context: Context) {
+    fun createNotification(movie: Movie, reminderTime: Long, context: Context, location: String) {
         val intent = Intent(context, AlarmReceiver::class.java)
         val bundle = Bundle()
         bundle.putInt(Constant.BUNDLE_ID_KEY, movie.id)
         bundle.putString(Constant.BUNDLE_TITLE_KEY, movie.title)
         bundle.putString(Constant.BUNDLE_RELEASE_KEY, movie.releaseDate)
         bundle.putDouble(Constant.BUNDLE_RATE_KEY, movie.voteAverage)
+        bundle.putString(Constant.BUNDLE_LOCATION_TO_WATCH_KEY, location)
         intent.putExtras(bundle)
 
         val pendingIntent = PendingIntent.getBroadcast(

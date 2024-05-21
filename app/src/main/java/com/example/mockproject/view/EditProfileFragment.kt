@@ -128,11 +128,11 @@ class EditProfileFragment : Fragment() {
             val name = bundle.getString(Constant.PROFILE_NAME_KEY)
             val email = bundle.getString(Constant.PROFILE_EMAIL_KEY)
             val birthday = bundle.getString(Constant.PROFILE_BIRTHDAY_KEY)
-            val isMale = bundle.getBoolean(Constant.PROFILE_GENDER_KEY, false)
+            val gender = bundle.getString(Constant.PROFILE_GENDER_KEY, "")
             mNameEdit.setText(name, TextView.BufferType.EDITABLE)
             mEmailEdit.setText(email, TextView.BufferType.EDITABLE)
             mDateOfBirthText.setText(birthday, TextView.BufferType.EDITABLE)
-            if (isMale) {
+            if (gender.equals("Male", true)) {
                 mRadioMale.isChecked = true
                 mRadioFemale.isChecked = false
             } else {

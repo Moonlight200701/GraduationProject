@@ -311,19 +311,21 @@ class AboutFragment : Fragment(), View.OnClickListener, OnDataLoaded {
 //                    val favRating = favMovieData[Constant.VOTE_AVERAGE_KEY] as Double
 
                 //Calculating Jaccard Similarity:
-                val genreIdIntersect = genreIds.intersect(favGenreIds).size.toDouble()
+                val genreIdIntersect = genreIds.intersect(favGenreIds.toSet()).size.toDouble()
+                Log.d("Genre Intersect", genreIdIntersect.toString())
                 val genreIdUnion = genreIds.union(favGenreIds).size.toDouble()
-                val actorIntersect = actors.intersect(favActors).size.toDouble()
+                Log.d("Genre Union", genreIdUnion.toString())
+                val actorIntersect = actors.intersect(favActors.toSet()).size.toDouble()
                 val actorUnion = actors.union(favActors).size.toDouble()
                 val jaccardSimilarity =
                     ((genreIdIntersect / genreIdUnion) + (actorIntersect / actorUnion)) / 2.0
+                //This is for more accurate suggestion, no need this
 //                val ratingSimilarity = 1 - abs(rating - favRating) / 10.0
 //
 //                val combinedSimilarity = 0.8 * jaccardSimilarity + 0.2 * ratingSimilarity
 
                 //The similarity Score map representing each movie score of similarity
-                similarityScore[movieId] =
-                    similarityScore.getOrDefault(movieId, 0.0) + jaccardSimilarity
+                similarityScore[movieId] = jaccardSimilarity
             }
         }
         val sortedSimilarityScore =

@@ -22,8 +22,8 @@ class AccountAdapter(
         private val accountStatus: TextView = itemView.findViewById(R.id.frg_account_status)
         private val disableButton: AppCompatButton =
             itemView.findViewById(R.id.frg_account_disableBtn)
-        private val deleteButton: AppCompatButton =
-            itemView.findViewById(R.id.frg_account_deleteBtn)
+//        private val deleteButton: AppCompatButton =
+//            itemView.findViewById(R.id.frg_account_deleteBtn)
 
         fun bind(position: Int) {
             val account = accountList[position]
@@ -32,9 +32,9 @@ class AccountAdapter(
             accountStatus.text = "Status: ${account.status}"
             //Button
             disableButton.tag = position
-            deleteButton.tag = position
+//            deleteButton.tag = position
             disableButton.setOnClickListener(mViewClickListener)
-            deleteButton.setOnClickListener(mViewClickListener)
+//            deleteButton.setOnClickListener(mViewClickListener)
             if(account.status.equals("Disabled", true)){
                 disableButton.setText(R.string.enable_account)
             } else {

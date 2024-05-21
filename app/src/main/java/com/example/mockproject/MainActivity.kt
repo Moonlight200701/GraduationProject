@@ -133,6 +133,9 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         if (mUser != null) {
             userId = mUser.uid
         }
+
+        //<Sync data from firestore here>
+
         mTabTitleList = mutableListOf(
             "Movie", "Favorite", "Setting", "Suggest", "Accounts"
         )
@@ -231,7 +234,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
             bundle.putString(Constant.PROFILE_NAME_KEY, mNameText.text.toString())
             bundle.putString(Constant.PROFILE_EMAIL_KEY, mEmailText.text.toString())
             bundle.putString(Constant.PROFILE_BIRTHDAY_KEY, mBirthDayText.text.toString())
-            bundle.putString(Constant.PROFILE_GENDER_KEY, mBirthDayText.text.toString())
+            bundle.putString(Constant.PROFILE_GENDER_KEY, mGenderText.text.toString())
 
             mEditProfileFragment = EditProfileFragment()
             mEditProfileFragment.setToolbarTitleListener(this)
@@ -374,6 +377,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         supportActionBar!!.title = toolbarTitle
     }
 
+    //This is for updating the number in the favorite number badge on the top of the favorite icon
     override fun onUpdateBadgeNumber(isFavourite: Boolean) {
         val tabView = mTabLayout.getTabAt(1)!!.customView
         val badgeText = tabView!!.findViewById<TextView>(R.id.tab_badge)
@@ -387,6 +391,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         mFavoriteFragment.updateFavouriteList(movie, isFavourite)
     }
 
+    //For changing the icon when the movie get marked Favorite
     override fun onUpdateFromFavorite(movie: Movie) {
         mMovieFragment.updateMovieList(movie, false)
         val detailFragment = supportFragmentManager.findFragmentByTag(Constant.FRAGMENT_DETAIL_TAG)
@@ -398,11 +403,13 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
     }
 
 
+    //Updating the movie favorite if the user mark favorite movie in the favorite fragment
     override fun onUpdateFromDetail(movie: Movie, isFavourite: Boolean) {
         mMovieFragment.updateMovieList(movie, isFavourite)
         mFavoriteFragment.updateFavouriteList(movie, isFavourite)
     }
 
+    //Changing the movie based on the setting fragment
     override fun onUpdateFromSetting() {
         mMovieFragment.setListMovieByCondition()
     }
@@ -658,6 +665,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         mGenderText.text = gender
     }
 
+    //Load the reminder of each users
     private fun loadReminderList() {
         var userId = ""
         if (mUser != null) {
