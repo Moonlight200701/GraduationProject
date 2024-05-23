@@ -55,7 +55,6 @@ class LoginActivity : AppCompatActivity() {
                 fAuth.signInWithEmailAndPassword(mEmail, mPassword)
                     .addOnCompleteListener {
                         if (it.isSuccessful) {
-//                        Toast.makeText(this,"Logged in successfully", Toast.LENGTH_SHORT).show()
                             val user: FirebaseUser? = fAuth.currentUser
                             val db = FirebaseFirestore.getInstance()
                             val docRef = db.collection("Users").document(user!!.uid)
@@ -84,7 +83,7 @@ class LoginActivity : AppCompatActivity() {
                                                 Toast.LENGTH_SHORT
                                             )
                                                 .show()
-
+                                            loginBtn.isEnabled = false
                                             val intent = Intent(this, MainActivity::class.java)
                                             intent.putExtra("Username", name)
                                             intent.putExtra("Email", email)

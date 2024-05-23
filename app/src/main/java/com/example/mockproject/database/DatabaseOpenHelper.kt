@@ -324,5 +324,10 @@ class DatabaseOpenHelper(
         return recordCount
     }
 
+    //The first time the app is installed in the device, get the data of an user on the database
+    fun synchronizeWithFirestore(){
+
+    }
+
 
 }

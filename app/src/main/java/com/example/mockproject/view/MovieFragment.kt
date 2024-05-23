@@ -23,7 +23,11 @@ import com.example.mockproject.api.RetrofitClient
 import com.example.mockproject.constant.APIConstant
 import com.example.mockproject.constant.Constant
 import com.example.mockproject.database.DatabaseOpenHelper
-import com.example.mockproject.listenercallback.*
+import com.example.mockproject.listenercallback.BadgeListener
+import com.example.mockproject.listenercallback.DetailListener
+import com.example.mockproject.listenercallback.MovieListener
+import com.example.mockproject.listenercallback.ReminderListener
+import com.example.mockproject.listenercallback.ToolbarTitleListener
 import com.example.mockproject.model.Movie
 import com.example.mockproject.model.MovieList
 import com.google.firebase.auth.FirebaseAuth
@@ -98,7 +102,7 @@ class MovieFragment(
         mHandler = Handler(Looper.getMainLooper())
 
 
-        if(user != null) {
+        if (user != null) {
             val userId = user.uid
             mMovieListDB = mDatabaseOpenHelper.getListMovie(userId)
         }
@@ -144,7 +148,8 @@ class MovieFragment(
                                 mMovieListDB.remove(movieItem)
                                 mBadgeListener.onUpdateBadgeNumber(false)
                                 mMovieListener.onUpdateFromMovie(movieItem, false)
-                                Toast.makeText(context, "Remove successfully", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Remove successfully", Toast.LENGTH_SHORT)
+                                    .show()
                             }
                             .addOnFailureListener {
                                 // Handle failure
@@ -201,7 +206,11 @@ class MovieFragment(
                 detailFragment.setRemindListener(mReminderListener)
                 detailFragment.arguments = bundle
                 requireActivity().supportFragmentManager.beginTransaction().apply {
-                    replace(R.id.movie_fragment_content, detailFragment, Constant.FRAGMENT_DETAIL_TAG)
+                    replace(
+                        R.id.movie_fragment_content,
+                        detailFragment,
+                        Constant.FRAGMENT_DETAIL_TAG
+                    )
                     addToBackStack(null)
                     commit()
                     mToolbarTitleListener.onUpdateToolbarTitle(movieItem.title)
@@ -332,7 +341,8 @@ class MovieFragment(
 
                 // Add load more item if necessary
                 if (mCurrentPage < responseBody.totalPages) {
-                    val loadMoreItem = Movie(0, "0", "0", 0.0, "0", "0", false, listOf(),false, "0", "0")
+                    val loadMoreItem =
+                        Movie(0, "0", "0", 0.0, "0", "0", false, listOf(), false, "0", "0")
                     mMovieList.add(loadMoreItem)
                     Log.d("Movie that get by api", mMovieList.toString())
                 }
@@ -373,7 +383,7 @@ class MovieFragment(
                 mReleaseYearPref,
                 mSortByPref,
             )
-        } else  {
+        } else {
             mMovieList.clear()
             mProgressBarLayout.visibility = View.VISIBLE
             getMovieListFromApi(isRefresh = false, isLoadMore = false, query = query)
