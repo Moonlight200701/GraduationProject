@@ -88,11 +88,11 @@ class FavoriteFragment(
                     val favoritesRef =
                         db.collection("Users").document(userId).collection("Favorites")
                     if (movieItem.isFavorite) {
+                        movieItem.isFavorite = false
                         mDatabaseOpenHelper.deleteMovie(movieItem.id, userId)
                         favoritesRef.document(movieItem.id.toString()).delete()
                             .addOnSuccessListener {
                                 // Delete successful
-                                movieItem.isFavorite = false
                                 mMovieFavouriteList.remove(movieItem)
                                 mBadgeListener.onUpdateBadgeNumber(false)
                                 mFavouriteListener.onUpdateFromFavorite(movieItem)
@@ -142,11 +142,14 @@ class FavoriteFragment(
         mMovieRecyclerView.layoutManager = LinearLayoutManager(activity)
         mMovieRecyclerView.setHasFixedSize(true)
         mMovieRecyclerView.adapter = mMovieAdapter
+
+        //This is for passing all of the favorite list to the recommendation fragment
         mFavoriteToRecommendListener = activity as FavoriteToRecommendListener
         mFavoriteToRecommendListener.fromFavoriteToRecommendation(mMovieFavouriteList)
     }
 
     fun updateFavouriteList(movie: Movie, isFavourite: Boolean) {
+        //If the movie iss marked favorite, add to the MoveFavorite Recycler view
         if (isFavourite) {
             mMovieFavouriteList.add(movie)
         } else {
@@ -163,8 +166,9 @@ class FavoriteFragment(
         }
         Log.d("My favorite", mMovieFavouriteList.toString())
         loadFavouriteList()
-        mFavoriteToRecommendListener = activity as FavoriteToRecommendListener
-        mFavoriteToRecommendListener.fromFavoriteToRecommendation(mMovieFavouriteList)
+        //Hoi bi thua
+//        mFavoriteToRecommendListener = activity as FavoriteToRecommendListener
+//        mFavoriteToRecommendListener.fromFavoriteToRecommendation(mMovieFavouriteList)
 
     }
 

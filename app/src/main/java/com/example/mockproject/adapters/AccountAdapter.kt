@@ -1,9 +1,11 @@
 package com.example.mockproject.adapters
 
+import android.annotation.SuppressLint
 import android.view.LayoutInflater
 import android.view.View
 import android.view.View.OnClickListener
 import android.view.ViewGroup
+import android.widget.ImageButton
 import android.widget.TextView
 import androidx.appcompat.widget.AppCompatButton
 import androidx.recyclerview.widget.RecyclerView
@@ -22,9 +24,11 @@ class AccountAdapter(
         private val accountStatus: TextView = itemView.findViewById(R.id.frg_account_status)
         private val disableButton: AppCompatButton =
             itemView.findViewById(R.id.frg_account_disableBtn)
-//        private val deleteButton: AppCompatButton =
-//            itemView.findViewById(R.id.frg_account_deleteBtn)
+        private val deleteButton: AppCompatButton =
+            itemView.findViewById(R.id.frg_account_deleteBtn)
+        private val markButton: ImageButton = itemView.findViewById(R.id.frg_account_markButton)
 
+        @SuppressLint("SetTextI18n")
         fun bind(position: Int) {
             val account = accountList[position]
             accountName.text = account.userName
@@ -32,13 +36,22 @@ class AccountAdapter(
             accountStatus.text = "Status: ${account.status}"
             //Button
             disableButton.tag = position
-//            deleteButton.tag = position
+            deleteButton.tag = position
+            markButton.tag = position
             disableButton.setOnClickListener(mViewClickListener)
-//            deleteButton.setOnClickListener(mViewClickListener)
-            if(account.status.equals("Disabled", true)){
+            deleteButton.setOnClickListener(mViewClickListener)
+            markButton.setOnClickListener(mViewClickListener)
+
+            if (account.status.equals("Disabled", true)) {
                 disableButton.setText(R.string.enable_account)
             } else {
                 disableButton.setText(R.string.disable_account)
+            }
+
+            if(!account.marked){
+                markButton.setBackgroundResource(R.drawable.ic_ok_faces_24)
+            } else {
+                markButton.setBackgroundResource(R.drawable.ic_warning_24)
             }
         }
     }

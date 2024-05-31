@@ -6,5 +6,8 @@ class APIConstant {
         var BASE_IMG_URL = "https://image.tmdb.org/t/p/original"
         var API_KEY = "2d106038b8d630bff67ed8948c8ad6c9"
         const val PROFILE_PREF = "profile_pref"
+
+        //For the youtube trailer
+        var YOUTUBE_URL = "https://www.youtube.com/embed/"
     }
 }

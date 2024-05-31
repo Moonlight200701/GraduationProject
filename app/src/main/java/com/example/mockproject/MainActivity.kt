@@ -178,7 +178,13 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         mSettingFragment = SettingFragment()
         mSettingFragment.setSettingListener(this)
 
-        mAboutFragment = AboutFragment()
+
+        mAboutFragment = AboutFragment(mDatabaseOpenHelper)
+        mAboutFragment.setBadgeListener(this)
+        mAboutFragment.setToolbarTitleListener(this)
+        mAboutFragment.setDetailListener(this)
+        mAboutFragment.setMovieListener(this)
+        mAboutFragment.setRemindListener(this)
 
         mReminderFragment = ReminderFragment(mDatabaseOpenHelper)
         mReminderFragment.setToolbarTitleListener(this)
@@ -293,7 +299,6 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
 
     }
 
-
     override fun onBackPressed() {
         if (this.mDrawerLayout.isDrawerOpen(GravityCompat.START)) {
             this.mDrawerLayout.closeDrawer(GravityCompat.START)
@@ -314,8 +319,19 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         }
     }
 
+
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.main, menu)
+        val isAdmin = intent.getStringExtra("isAdmin")
+        if (isAdmin == "1") {
+            val menu1 = menu!!.findItem(R.id.action_favorite)
+            val menu2 = menu.findItem(R.id.action_setting)
+            val menu3 = menu.findItem(R.id.action_about)
+            menu1.title = "Setting"
+            menu2.title = "Suggest"
+            menu3.title = "Accounts"
+
+        }
         val menuItem = menu?.findItem(R.id.action_search)
         val searchView = menuItem?.actionView as SearchView
         val manager = getSystemService(Context.SEARCH_SERVICE) as SearchManager
@@ -328,13 +344,13 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
                 searchView.clearFocus()
-                return false
+                return true
             }
 
             //every time the text is entered, search for that immediately
             override fun onQueryTextChange(newText: String?): Boolean {
                 mMovieFragment.updateMovies(newText ?: "")
-                return true
+                return false
             }
 
         })
@@ -387,11 +403,12 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
             badgeText.setText("${--mFavouriteCount}", TextView.BufferType.EDITABLE)
     }
 
+    //Updating the movie if the user marks or unmarks the movie in the movie fragment
     override fun onUpdateFromMovie(movie: Movie, isFavourite: Boolean) {
         mFavoriteFragment.updateFavouriteList(movie, isFavourite)
     }
 
-    //For changing the icon when the movie get marked Favorite
+    //For changing the icon when the movie get delete from the favorite list fragment, only update in the favorite is deleting 1 movie from the favorite list
     override fun onUpdateFromFavorite(movie: Movie) {
         mMovieFragment.updateMovieList(movie, false)
         val detailFragment = supportFragmentManager.findFragmentByTag(Constant.FRAGMENT_DETAIL_TAG)
@@ -403,7 +420,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
     }
 
 
-    //Updating the movie favorite if the user mark favorite movie in the favorite fragment
+    //Updating the movie if the user marks or unmarks the movie in the detail fragment
     override fun onUpdateFromDetail(movie: Movie, isFavourite: Boolean) {
         mMovieFragment.updateMovieList(movie, isFavourite)
         mFavoriteFragment.updateFavouriteList(movie, isFavourite)
@@ -477,6 +494,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
 
         //Update UI
         mAvatarImg.setImageBitmap(avatarBitmap)
+        Log.d("AvatarBitmap", mAvatarImg.toString())
         mNameText.text = mProfileSharedPreferences.getString(
             Constant.PROFILE_NAME_KEY,
             Constant.PROFILE_NAME_DEFAULT
@@ -583,7 +601,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
                     }
                 }
             } else {
-                // Admin condition: skip the second element
+                // Admin condition: skip the second element aka skip the favorite icon and the favorite title
                 if (index >= 1) {
                     titleTab.text = mTabTitleList[index + 1]
                     iconTab.setImageResource(mTabIconList[index + 1]) // Skip the second element
@@ -633,27 +651,6 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         } catch (e: Exception) {
             mAvatarImg.setImageResource(R.drawable.ic_person_24)
         }
-//        mNameText.text = mProfileSharedPreferences.getString(
-//            Constant.PROFILE_NAME_KEY,
-//            Constant.PROFILE_NAME_DEFAULT
-//        )
-//        mEmailText.text = mProfileSharedPreferences.getString(
-//            Constant.PROFILE_EMAIL_KEY,
-//            Constant.PROFILE_EMAIL_DEFAULT
-//        )
-//        mBirthDayText.text = mProfileSharedPreferences.getString(
-//            Constant.PROFILE_BIRTHDAY_KEY,
-//            Constant.PROFILE_BIRTHDAY_DEFAULT
-//        )
-//        if (mProfileSharedPreferences.getBoolean(
-//                Constant.PROFILE_GENDER_KEY, false
-//            )
-//        ) {
-//            mGenderText.text = Constant.GENDER_MALE
-//        } else {
-//            mGenderText.text = Constant.GENDER_FEMALE
-//        }
-
         val userName = intent.getStringExtra("Username")
         mNameText.text = userName
         val email = intent.getStringExtra("Email")
@@ -719,6 +716,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         loadReminderList()
     }
 
+    //pass the favorite list from the Favorite Fragment to the About Fragment aka the Suggest Fragment
     override fun fromFavoriteToRecommendation(movieList: ArrayList<Movie>) {
         val isAdmin = intent.getStringExtra("isAdmin")
         if (isAdmin == "0") {
@@ -726,5 +724,5 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
             aboutFragment.displayReceivedMovieFavoriteList(movieList)
         }
     }
-    //pass the favorite list from the Favorite Fragment to the About Fragment aka the Suggest Fragment
+
 }

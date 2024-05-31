@@ -7,5 +7,7 @@ data class Account(
     val birthdayDate: String,
     val gender: String,
     var status: String,
-    val createdTime: String
+    val createdTime: String,
+    val lastLoginTime: String,
+    var marked: Boolean
 )

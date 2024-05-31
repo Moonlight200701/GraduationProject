@@ -10,6 +10,7 @@ import android.view.LayoutInflater
 import android.view.Menu
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
@@ -22,6 +23,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.mockproject.R
 import com.example.mockproject.adapters.CastAndCrewAdapter
+import com.example.mockproject.adapters.TrailerAdapter
 import com.example.mockproject.api.ApiInterface
 import com.example.mockproject.api.RetrofitClient
 import com.example.mockproject.constant.APIConstant
@@ -35,11 +37,17 @@ import com.example.mockproject.listenercallback.ToolbarTitleListener
 import com.example.mockproject.model.CastAndCrew
 import com.example.mockproject.model.CastCrewList
 import com.example.mockproject.model.Movie
+import com.example.mockproject.model.MovieTrailer
+import com.example.mockproject.model.MovieTrailerList
 import com.example.mockproject.util.NotificationUtil
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import com.squareup.picasso.Picasso
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
@@ -47,6 +55,7 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import java.util.Calendar
+import java.util.concurrent.CountDownLatch
 
 
 class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragment(),
@@ -55,6 +64,7 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
     private lateinit var mMovieReminder: Movie
     private var mReminderExisted: Boolean = false
     private lateinit var mCastAndCrewList: ArrayList<CastAndCrew>
+    private lateinit var mTrailerList: ArrayList<MovieTrailer>
 
     private lateinit var mFavouriteBtn: ImageButton
     private lateinit var mReleaseDateText: TextView
@@ -65,6 +75,8 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
     private lateinit var mReminderTimeText: TextView
     private lateinit var mCastRecyclerView: RecyclerView
     private lateinit var mCastAndCrewAdapter: CastAndCrewAdapter
+    private lateinit var mTrailerRecyclerView: RecyclerView
+    private lateinit var mTrailerAdapter: TrailerAdapter
 
     private lateinit var mToolbarTitleListener: ToolbarTitleListener
     private lateinit var mBadgeListener: BadgeListener
@@ -122,6 +134,7 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
         mReminderTimeText = view.findViewById(R.id.reminder_time_text)
         mOverviewText = view.findViewById(R.id.overview_text)
         mCastRecyclerView = view.findViewById(R.id.cast_and_crew_recyclerview)
+        mTrailerRecyclerView = view.findViewById(R.id.trailer_recyclerView)
 
 
         if (mMovie.isFavorite) {
@@ -149,7 +162,7 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
 
         mOverviewText.text = mMovie.overview
 
-        val layoutManager = LinearLayoutManager(activity)
+        val layoutManager = LinearLayoutManager(context)
         layoutManager.orientation = LinearLayoutManager.HORIZONTAL
 
         mCastAndCrewList = arrayListOf()
@@ -158,9 +171,31 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
         mCastRecyclerView.setHasFixedSize(true)
         mCastRecyclerView.adapter = mCastAndCrewAdapter
 
-        getCastAndCrewFromApi()
+        //Trailer
+        val layoutManager2 = LinearLayoutManager(context)
+        layoutManager2.orientation = LinearLayoutManager.HORIZONTAL
+        mTrailerList = arrayListOf()
+        mTrailerAdapter = TrailerAdapter(mTrailerList)
+        mTrailerRecyclerView.layoutManager = layoutManager2
+        mTrailerRecyclerView.setHasFixedSize(true)
+        mTrailerRecyclerView.adapter = mTrailerAdapter
+
+
         setHasOptionsMenu(true)
         return view
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        CoroutineScope(Dispatchers.IO).launch {
+            getTrailerVideoFromApi()
+
+            withContext(Dispatchers.Main) {
+                mTrailerAdapter.notifyDataSetChanged()
+                getCastAndCrewFromApi()
+            }
+        }
     }
 
     override fun onPrepareOptionsMenu(menu: Menu) {
@@ -185,10 +220,10 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
                     val favoritesRef =
                         db.collection("Users").document(userId).collection("Favorites")
                     if (mMovie.isFavorite) {
+                        mMovie.isFavorite = false
                         mDatabaseOpenHelper.deleteMovie(mMovie.id, userId)
                         favoritesRef.document(mMovie.id.toString()).delete()
                             .addOnSuccessListener {
-                                mMovie.isFavorite = false
                                 mFavouriteBtn.setImageResource(R.drawable.ic_star_outline_24)
                                 mDetailListener.onUpdateFromDetail(mMovie, false)
                                 mBadgeListener.onUpdateBadgeNumber(false)
@@ -201,6 +236,7 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
                                 ).show()
                             }
                     } else {
+                        mMovie.isFavorite = true
                         mDatabaseOpenHelper.addMovie(mMovie, userId)
                         mDatabaseOpenHelper.addMovieGenres(mMovie.id, mMovie.genreIds)
                         val favoriteData = hashMapOf(
@@ -211,12 +247,12 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
                             "vote average" to mMovie.voteAverage,
                             "release date" to mMovie.releaseDate,
                             "genre ids" to mMovie.genreIds,
-                            "adult" to mMovie.adult
+                            "adult" to mMovie.adult,
+                            "isFavorite" to mMovie.isFavorite
                             // Add other movie details here as needed
                         )
                         favoritesRef.document(mMovie.id.toString()).set(favoriteData)
                             .addOnSuccessListener {
-                                mMovie.isFavorite = true
                                 mFavouriteBtn.setImageResource(R.drawable.ic_star_black_24)
                                 mDetailListener.onUpdateFromDetail(mMovie, true)
                                 mBadgeListener.onUpdateBadgeNumber(true)
@@ -252,7 +288,7 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
                 val responseBody = response!!.body()
                 mCastAndCrewList.addAll(responseBody!!.castList)
                 mCastAndCrewList.addAll(responseBody.crewList)
-                Log.d("Cast and crew list", mCastAndCrewList.toString())
+                Log.d("Cast and crew list", responseBody.toString())
                 mCastAndCrewAdapter.notifyDataSetChanged()
             }
 
@@ -260,6 +296,42 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
             }
         })
     }
+
+    //For the trailer of the movie
+    private fun getTrailerVideoFromApi() {
+        val countDownLatch = CountDownLatch(1)
+        val retrofit: ApiInterface =
+            RetrofitClient().getRetrofitInstance().create(ApiInterface::class.java)
+        val retrofitData = retrofit.getMovieTrailer(mMovie.id, APIConstant.API_KEY)
+
+        retrofitData.enqueue(object : Callback<MovieTrailerList> {
+            override fun onResponse(
+                call: Call<MovieTrailerList>,
+                response: Response<MovieTrailerList>
+            ) {
+
+                val responseBody = response.body()
+                Log.d("retrofit data", responseBody.toString())
+                val keys = responseBody?.results
+                if (keys != null) {
+                    mTrailerList.addAll(keys)
+                }
+                countDownLatch.countDown() // Decrement the count of the latch, releasing the waiting thread when count reaches zero
+            }
+
+            override fun onFailure(call: Call<MovieTrailerList>, t: Throwable) {
+                // Handle the error scenario, possibly with a retry mechanism
+                countDownLatch.countDown() // Ensure the count is decremented even on failure
+            }
+        })
+
+        try {
+            countDownLatch.await() // Wait for the count to reach zero
+        } catch (e: InterruptedException) {
+            e.printStackTrace()
+        }
+    }
+
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun createReminder() {
@@ -275,6 +347,7 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
         val startHour = currentDateTime.get(Calendar.HOUR_OF_DAY)
         val startMinute = currentDateTime.get(Calendar.MINUTE)
 
+        //Showing the triple dialogs
         DatePickerDialog(requireContext(), { _, year, month, day ->
             TimePickerDialog(requireContext(), { _, hour, minute ->
                 val pickedDateTime = Calendar.getInstance()
@@ -313,9 +386,10 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
                                     "adult" to mMovie.adult,
                                     "reminder time" to mMovie.reminderTimeDisplay
                                 )
-                                df.document(mMovie.id.toString()).update(reminderItem).addOnSuccessListener {
+                                df.document(mMovie.id.toString()).update(reminderItem)
+                                    .addOnSuccessListener {
 
-                                }
+                                    }
                                 NotificationUtil().cancelNotification(mMovie.id, requireContext())
                                 NotificationUtil().createNotification(
                                     mMovie,
@@ -345,9 +419,10 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
                                     "adult" to mMovie.adult,
                                     "reminder time" to mMovie.reminderTimeDisplay
                                 )
-                                df.document(mMovie.id.toString()).set(reminderItem).addOnSuccessListener {
+                                df.document(mMovie.id.toString()).set(reminderItem)
+                                    .addOnSuccessListener {
 
-                                }
+                                    }
                                 NotificationUtil().createNotification(
                                     mMovie,
                                     reminderTimeInMillis,
@@ -362,6 +437,10 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
                     }
                 }
                 dialogBuilder.setNegativeButton("Cancel", null)
+                val dialog = dialogBuilder.create()
+                dialog.window?.attributes?.dimAmount =
+                    0.9f // Set this value between 0.0f and 1.0f to control the darkness
+                dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
                 dialogBuilder.show()
             }, startHour, startMinute, true).show()
         }, startYear, startMonth, startDay).show()

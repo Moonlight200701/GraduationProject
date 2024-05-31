@@ -10,6 +10,7 @@ import android.view.Menu
 import android.view.View
 import android.view.View.OnClickListener
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
@@ -20,7 +21,6 @@ import com.example.mockproject.constant.Constant
 import com.example.mockproject.database.DatabaseOpenHelper
 import com.example.mockproject.model.Account
 import com.google.firebase.Firebase
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.firestore
 
 //Purpose of database param? delete the movie in the local as well if i want to delete the user
@@ -49,6 +49,7 @@ class AdminFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        //Get the account from the firestore
         fStore.collection("Users")
             .whereEqualTo("isAdmin", "0") //Only displaying users apart from admin
             .get()
@@ -61,6 +62,8 @@ class AdminFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
                     val gender = document.getString("Gender") ?: "Unknown"
                     val status = document.getString("Status") ?: "Unknown"
                     val createdTime = document.getString("CreatedTime") ?: "Unknown"
+                    val lastLoginTime = document.getString("Last Login time") ?: "Unknown"
+                    val marked = document.getBoolean("Marked") ?: false
                     accountList.add(
                         Account(
                             id,
@@ -69,7 +72,9 @@ class AdminFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
                             birthday,
                             gender,
                             status,
-                            createdTime
+                            createdTime,
+                            lastLoginTime,
+                            marked
                         )
                     )
                 }
@@ -93,7 +98,86 @@ class AdminFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
 
             R.id.frg_account_disableBtn -> handleDisableEnableButtonClick(view)
 
+            R.id.frg_account_deleteBtn -> handleTerminateButtonClick(view)
+
+            R.id.frg_account_markButton -> handleMarkButtonClick(view)
+
         }
+    }
+
+
+    private fun handleMarkButtonClick(view: View) {
+        val position = view.tag as Int
+        val accountItem = accountList[position]
+        mDocRef.document(accountItem.accountId).get().addOnSuccessListener {
+            val isMarked = it.getBoolean("Marked")
+            val newMarked: HashMap<String, Any>
+            if(isMarked == false){
+                newMarked = hashMapOf("Marked" to true)
+                mDocRef.document(accountItem.accountId).update(newMarked).addOnSuccessListener {
+                    accountItem.marked = newMarked["Marked"] as Boolean
+                    Toast.makeText(context, "Marked the account successfully", Toast.LENGTH_SHORT).show()
+                    mAccountAdapter.notifyItemChanged(position)
+                }.addOnFailureListener{
+                    Toast.makeText(context, "Unexpected error occurs", Toast.LENGTH_SHORT).show()
+                }
+
+            } else {
+                newMarked = hashMapOf("Marked" to false)
+                mDocRef.document(accountItem.accountId).update(newMarked).addOnSuccessListener {
+                    accountItem.marked = newMarked["Marked"] as Boolean
+                    Toast.makeText(context, "Unmarked the account successfully", Toast.LENGTH_SHORT).show()
+                    mAccountAdapter.notifyItemChanged(position)
+                }.addOnFailureListener{
+                    Toast.makeText(context, "Unexpected error occurs", Toast.LENGTH_SHORT).show()
+                }
+
+            }
+        }
+
+
+    }
+
+    private fun handleTerminateButtonClick(view: View) {
+//        Toast.makeText(context, "Deleted :>", Toast.LENGTH_SHORT).show()
+        val position = view.tag as Int
+        val accountItem = accountList[position]
+        val dialogBuilder = AlertDialog.Builder(context)
+        dialogBuilder.setCancelable(true)
+        dialogBuilder.setTitle("Confirmation")
+        dialogBuilder.setMessage("Are you sure you want to terminate this account?")
+        dialogBuilder.setPositiveButton("Yes") { _, _ ->
+            val dialogBuilder2 = AlertDialog.Builder(context)
+            dialogBuilder2.setCancelable(true)
+            dialogBuilder2.setTitle("Confirmation again")
+            dialogBuilder2.setMessage("Are you REALLY sure you want to terminate this account??")
+            dialogBuilder2.setPositiveButton("Yes") { dialog2, _ ->
+                mDocRef.document(accountItem.accountId).delete().addOnCompleteListener {
+                    if(it.isSuccessful){
+                        Toast.makeText(context, "Account terminated, cannot redo :<", Toast.LENGTH_SHORT).show()
+                        accountList.removeAt(position)
+                        mAccountAdapter.notifyDataSetChanged()
+                    }
+                }
+                dialog2.dismiss()
+            }
+            dialogBuilder2.setNegativeButton("No") { dialog2, _ ->
+                dialog2.dismiss()
+            }
+            val dialog2 = dialogBuilder2.create()
+            dialog2.window?.attributes?.dimAmount = 0.9f
+            dialog2.window?.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            dialog2.show()
+        }
+        dialogBuilder.setNegativeButton("No") { dialog, _ ->
+            dialog.dismiss()
+        }
+        val dialog = dialogBuilder.create()
+        dialog.window?.attributes?.dimAmount = 0.9f
+        dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+        dialog.show()
+
+
     }
 
     //When the admin click each item, shows the detail of the accounts
@@ -106,7 +190,10 @@ class AdminFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
         val accountEmail = dialogView.findViewById<TextView>(R.id.detail_dialog_email_tv)
         val accountBirthday = dialogView.findViewById<TextView>(R.id.detail_dialog_birthday_tv)
         val accountGender = dialogView.findViewById<TextView>(R.id.detail_dialog_gender_tv)
-        val accountTimeCreated = dialogView.findViewById<TextView>(R.id.detail_dialog_timeCreated_tv)
+        val accountTimeCreated =
+            dialogView.findViewById<TextView>(R.id.detail_dialog_timeCreated_tv)
+        val accountLastLoginTime =
+            dialogView.findViewById<TextView>(R.id.detail_dialog_lastLoginTime_tv)
 
         // Create the dialog builder
         accountName.text = account.userName
@@ -114,6 +201,7 @@ class AdminFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
         accountBirthday.text = "Birthday: ${account.birthdayDate}"
         accountGender.text = "Gender: ${account.gender}"
         accountTimeCreated.text = "Time Created: ${account.createdTime}"
+        accountLastLoginTime.text = "Last login time: ${account.lastLoginTime}"
 
         val dialogBuilder = AlertDialog.Builder(context)
         dialogBuilder.setView(dialogView)
@@ -123,6 +211,8 @@ class AdminFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
 
         // Create and show the dialog
         val dialog = dialogBuilder.create()
+        dialog.window?.attributes?.dimAmount = 0.9f
+        dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
         dialog.show()
     }
 
@@ -150,7 +240,10 @@ class AdminFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
         }
         builder.setNegativeButton("No") { dialog, _ -> dialog.dismiss() }
         builder.setCancelable(true)
-        builder.show()
+        val dialog = builder.create()
+        dialog.window?.attributes?.dimAmount = 0.9f
+        dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+        dialog.show()
     }
 
     private fun updateAccountStatus(accountItem: Account, newStatus: String, position: Int) {

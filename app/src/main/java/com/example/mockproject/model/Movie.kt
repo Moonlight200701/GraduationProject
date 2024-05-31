@@ -3,6 +3,7 @@ package com.example.mockproject.model
 import com.google.gson.annotations.SerializedName
 import java.io.Serializable
 
+//The reason don't need to tell the other: cuz they all have initial value
 data class Movie(
     @SerializedName("id") var id: Int,
     @SerializedName("title") var title: String,

@@ -6,7 +6,11 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteException
 import android.database.sqlite.SQLiteOpenHelper
+import android.util.Log
 import com.example.mockproject.model.Movie
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.tasks.await
 
 class DatabaseOpenHelper(
     context: Context?, factory: SQLiteDatabase.CursorFactory?
@@ -33,6 +37,20 @@ class DatabaseOpenHelper(
 
         private var GENRE_TABLE = "genre_table"
         private var GENRE_ID = "genre_id"
+
+        //Firebase
+        private var FIREBASE_USERS_COLLECTION_NAME = "Users"
+        private var FIREBASE_MOVIE_COLLECTION_NAME = "Favorites"
+        private var FIREBASE_MOVIE_ID = "id"
+        private var FIREBASE_MOVIE_TITLE = "title"
+        private var FIREBASE_MOVIE_POSTER_PATH = "poster path"
+        private var FIREBASE_MOVIE_OVERVIEW = "overview"
+        private var FIREBASE_MOVIE_VOTE_AVERAGE = "vote average"
+        private var FIREBASE_MOVIE_RELEASE_DATE = "release date"
+        private var FIREBASE_MOVIE_GENRE_IDS = "genre ids"
+        private var FIREBASE_MOVIE_ADULTS = "adult"
+        private var FIREBASE_MOVIE_IS_FAVORITE = "isFavorite"
+
     }
 
     override fun onCreate(db: SQLiteDatabase) {
@@ -89,7 +107,7 @@ class DatabaseOpenHelper(
     }
 
     // Method to add a movie to the database
-    fun addMovie(movie: Movie, userId: String) : Int {
+    fun addMovie(movie: Movie, userId: String): Int {
         val db = this.writableDatabase
         val contentValues = ContentValues()
         contentValues.put(MOVIE_ID, movie.id)
@@ -206,7 +224,11 @@ class DatabaseOpenHelper(
         contentValues.put(MOVIE_ID, movieId)
         contentValues.put(USER_ID, userId)
         val recordCount =
-            db.delete(REMINDER_TABLE, "$MOVIE_ID = ? AND $USER_ID = ?", arrayOf(movieId.toString(), userId))
+            db.delete(
+                REMINDER_TABLE,
+                "$MOVIE_ID = ? AND $USER_ID = ?",
+                arrayOf(movieId.toString(), userId)
+            )
         db.close()
         return recordCount
     }
@@ -217,7 +239,12 @@ class DatabaseOpenHelper(
         contentValues.put(REMINDER_TIME, movie.reminderTime)
         contentValues.put(REMINDER_TIME_DISPLAY, movie.reminderTimeDisplay)
         val recordCount =
-            db.update(REMINDER_TABLE, contentValues, "$MOVIE_ID = ? AND $USER_ID = ?", arrayOf(movie.id.toString(), userId))
+            db.update(
+                REMINDER_TABLE,
+                contentValues,
+                "$MOVIE_ID = ? AND $USER_ID = ?",
+                arrayOf(movie.id.toString(), userId)
+            )
         db.close()
         return recordCount
     }
@@ -229,7 +256,11 @@ class DatabaseOpenHelper(
         contentValues.put(USER_ID, userId)
 
         //Delete from the Movie Table
-        val recordCount = db.delete(MOVIE_TABLE, "$MOVIE_ID = ? AND $USER_ID = ? ", arrayOf(id.toString(), userId))
+        val recordCount = db.delete(
+            MOVIE_TABLE,
+            "$MOVIE_ID = ? AND $USER_ID = ? ",
+            arrayOf(id.toString(), userId)
+        )
 
         //Delete the movie from the genre table
         db.delete(GENRE_TABLE, "$MOVIE_ID = $id", null)
@@ -317,17 +348,75 @@ class DatabaseOpenHelper(
         val db = this.writableDatabase
         val contentValues = ContentValues()
         contentValues.put(USER_ID, userId)
-        val recordCount = db.delete(MOVIE_TABLE," $USER_ID = $userId", null)
+        val recordCount = db.delete(MOVIE_TABLE, " $USER_ID = $userId", null)
         db.delete(REMINDER_TABLE, "$USER_ID = $userId", null)
         //Delete the movie from the genre table where the movie id of that movie have the userId
-        db.delete(GENRE_TABLE, "$MOVIE_ID IN (SELECT $MOVIE_ID FROM $MOVIE_TABLE WHERE $USER_ID = ?)", arrayOf(userId))
+        db.delete(
+            GENRE_TABLE,
+            "$MOVIE_ID IN (SELECT $MOVIE_ID FROM $MOVIE_TABLE WHERE $USER_ID = ?)",
+            arrayOf(userId)
+        )
         return recordCount
     }
 
-    //The first time the app is installed in the device, get the data of an user on the database
-    fun synchronizeWithFirestore(){
+    //Synchronize the firestore with the local database
+    suspend fun synchronizeWithFireStore(): Int {
+        var recordCount1: Long = 0
+        val db = this.writableDatabase
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+        val fireStore = FirebaseFirestore.getInstance()
+        val documents = fireStore.collection(FIREBASE_USERS_COLLECTION_NAME)
+            .document(userId)
+            .collection(FIREBASE_MOVIE_COLLECTION_NAME)
+            .get()
+            .await()
+        if (documents.isEmpty) {
+            Log.d("Case New Account/Account delete all the favorites", "No documents for this one")
+            return 0
+        } else {
+            try {
+                db.delete(MOVIE_TABLE, "$USER_ID = ?", arrayOf(userId))
+                db.delete(
+                    GENRE_TABLE,
+                    "$MOVIE_ID IN (SELECT $MOVIE_ID FROM $MOVIE_TABLE WHERE $USER_ID = ?)",
+                    arrayOf(userId)
+                )
 
+                for (document in documents) {
+                    //Delete the existing data in the local database
+                    val movie = document.data
+                    val contentValues = ContentValues().apply {
+                        put(MOVIE_ID, (movie[FIREBASE_MOVIE_ID] as Long).toInt())
+                        put(MOVIE_TITLE, movie[FIREBASE_MOVIE_TITLE] as String)
+                        put(MOVIE_OVERVIEW, movie[FIREBASE_MOVIE_OVERVIEW] as String)
+                        put(MOVIE_RATING, movie[FIREBASE_MOVIE_VOTE_AVERAGE] as Double)
+                        put(MOVIE_DATE, movie[FIREBASE_MOVIE_RELEASE_DATE] as String)
+                        put(MOVIE_IMAGE_POSTER, movie[FIREBASE_MOVIE_POSTER_PATH] as String)
+                        put(
+                            MOVIE_ADULT,
+                            if (movie[FIREBASE_MOVIE_ADULTS] as Boolean) 0 else 1
+                        )
+                        put(
+                            MOVIE_FAVORITE,
+                            if (movie[FIREBASE_MOVIE_IS_FAVORITE] as Boolean) 0 else 1
+                        )
+                        put(USER_ID, userId)
+                    }
+                    recordCount1 = db.insert(MOVIE_TABLE, null, contentValues)
+
+                    val genreIds = movie[FIREBASE_MOVIE_GENRE_IDS] as List<*>
+                    for (genreId in genreIds) {
+                        val genreValues = ContentValues().apply {
+                            put(MOVIE_ID, (movie[FIREBASE_MOVIE_ID] as Long).toInt())
+                            put(GENRE_ID, genreId as String)
+                        }
+                        db.insert(GENRE_TABLE, null, genreValues)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("Sync", "Error during database transaction", e)
+            }
+            return recordCount1.toInt()
+        }
     }
-
-
 }

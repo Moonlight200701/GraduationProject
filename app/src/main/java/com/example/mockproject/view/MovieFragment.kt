@@ -69,6 +69,9 @@ class MovieFragment(
     private var fAuth = FirebaseAuth.getInstance()
     private val user: FirebaseUser? = fAuth.currentUser
 
+    //Search
+    private var searchQuery: String? = null
+
     fun setToolbarTitleListener(toolbarTitleListener: ToolbarTitleListener) {
         this.mToolbarTitleListener = toolbarTitleListener
     }
@@ -139,11 +142,11 @@ class MovieFragment(
                     val favoritesRef =
                         db.collection("Users").document(userId).collection("Favorites")
                     if (movieItem.isFavorite) {
+                        movieItem.isFavorite = false
                         mDatabaseOpenHelper.deleteMovie(movieItem.id, userId)
                         favoritesRef.document(movieItem.id.toString()).delete()
                             .addOnSuccessListener {
                                 // Delete successful
-                                movieItem.isFavorite = false
                                 mMovieAdapter.notifyItemChanged(position)
                                 mMovieListDB.remove(movieItem)
                                 mBadgeListener.onUpdateBadgeNumber(false)
@@ -160,6 +163,7 @@ class MovieFragment(
                                 ).show()
                             }
                     } else {
+                        movieItem.isFavorite = true
                         mDatabaseOpenHelper.addMovie(movieItem, userId)
                         mDatabaseOpenHelper.addMovieGenres(movieItem.id, movieItem.genreIds)
                         val favoriteData = hashMapOf(
@@ -170,13 +174,13 @@ class MovieFragment(
                             "vote average" to movieItem.voteAverage,
                             "release date" to movieItem.releaseDate,
                             "genre ids" to movieItem.genreIds,
-                            "adult" to movieItem.adult
+                            "adult" to movieItem.adult,
+                            "isFavorite" to movieItem.isFavorite
 
                         )
                         favoritesRef.document(movieItem.id.toString()).set(favoriteData)
                             .addOnSuccessListener {
                                 // Add successful
-                                movieItem.isFavorite = true
                                 mMovieAdapter.notifyItemChanged(position)
                                 mMovieListDB.add(movieItem)
                                 mBadgeListener.onUpdateBadgeNumber(true)
@@ -265,19 +269,21 @@ class MovieFragment(
         mMovieAdapter.notifyDataSetChanged()
     }
 
+    //If the user want to see more movies and this is the end of the page
     private fun onLoadMoreListener() {
         mMovieRecyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 super.onScrolled(recyclerView, dx, dy)
                 if (isLastItemDisplaying(recyclerView)) {
                     mHandler.postDelayed({
-                        getMovieListFromApi(isRefresh = false, isLoadMore = true, query = null)
+                        getMovieListFromApi(isRefresh = false, isLoadMore = true, query = searchQuery)
                     }, 1000)
                 }
             }
         })
     }
 
+    //See if this is the last item of the first page
     private fun isLastItemDisplaying(recyclerView: RecyclerView): Boolean {
         if (recyclerView.adapter!!.itemCount != 0) {
             val lastVisibleItemPosition =
@@ -298,6 +304,7 @@ class MovieFragment(
     }
 
     private fun getMovieListFromApi(isRefresh: Boolean, isLoadMore: Boolean, query: String?) {
+        searchQuery = query
         if (isLoadMore) {
             mCurrentPage += 1
         } else {
@@ -310,12 +317,14 @@ class MovieFragment(
             RetrofitClient().getRetrofitInstance().create(ApiInterface::class.java)
 
         // the API call to include the search query parameter if provided
-        val retrofitData = if (!query.isNullOrEmpty()) {
+        val retrofitData = if (!(searchQuery.isNullOrEmpty())) {
             retrofit.searchMovie(
-                query,
+                searchQuery!!,
                 APIConstant.API_KEY,
-                includeAdult = false,
-                language = "en-US",
+//                includeAdult = false,
+//                language = "en-US",
+                mCurrentPage,
+                mReleaseYearPref
             )
         } else {
             retrofit.getMovieList(mCategoryPref, APIConstant.API_KEY, "$mCurrentPage")
@@ -323,7 +332,10 @@ class MovieFragment(
 
         retrofitData.enqueue(object : Callback<MovieList?> {
             override fun onResponse(call: Call<MovieList?>, response: Response<MovieList?>) {
+                //Remove the loading icon
                 mMovieAdapter.removeItemLoading()
+
+                //Getting all of the movie that got from the api, and add them to the MovieRecyclerView
                 val responseBody = response.body()
                 val movieResultList = responseBody?.results as ArrayList<Movie>
                 // Clear the current list if not loading more
@@ -332,13 +344,16 @@ class MovieFragment(
                 }
                 mMovieList.addAll(movieResultList)
                 mMovieAdapter.setupMovieFavorite(mMovieListDB)
-                mMovieAdapter.setupMovieBySetting(
-                    mMovieList,
-                    mRatePref,
-                    mReleaseYearPref,
-                    mSortByPref
-                )
 
+                //Ignore the setting when searching
+                if(query.isNullOrEmpty()) {
+                    mMovieAdapter.setupMovieBySetting(
+                        mMovieList,
+                        mRatePref,
+                        mReleaseYearPref,
+                        mSortByPref
+                    )
+                }
                 // Add load more item if necessary
                 if (mCurrentPage < responseBody.totalPages) {
                     val loadMoreItem =
@@ -374,7 +389,7 @@ class MovieFragment(
     }
 
     fun updateMovies(query: String?) {
-        getMovieListFromApi(isRefresh = true, isLoadMore = false, query = null)
+//        getMovieListFromApi(isRefresh = true, isLoadMore = false, query = null)
         if (query.isNullOrEmpty()) {
             // If the query is empty or null, show all movies
             mMovieAdapter.setupMovieBySetting(

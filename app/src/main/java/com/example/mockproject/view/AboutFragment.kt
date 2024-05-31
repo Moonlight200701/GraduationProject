@@ -17,6 +17,7 @@ import com.example.mockproject.api.ApiInterface
 import com.example.mockproject.api.RetrofitClient
 import com.example.mockproject.constant.APIConstant
 import com.example.mockproject.constant.Constant
+import com.example.mockproject.database.DatabaseOpenHelper
 import com.example.mockproject.listenercallback.BadgeListener
 import com.example.mockproject.listenercallback.DetailListener
 import com.example.mockproject.listenercallback.MovieListener
@@ -44,7 +45,7 @@ import java.io.IOException
 import java.util.concurrent.CountDownLatch
 
 //This fragment is for recommending movies
-class AboutFragment : Fragment(), View.OnClickListener, OnDataLoaded {
+class AboutFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragment(), View.OnClickListener, OnDataLoaded {
     //The movie from the API
     private var mMovieListFromApi = ArrayList<Movie>()
 
@@ -81,6 +82,10 @@ class AboutFragment : Fragment(), View.OnClickListener, OnDataLoaded {
 
     fun setRemindListener(reminderListener: ReminderListener) {
         this.mReminderListener = reminderListener
+    }
+
+    fun setMovieListener(movieListener: MovieListener){
+        this.mMovieListener = movieListener
     }
 
     override fun onCreateView(
@@ -138,6 +143,8 @@ class AboutFragment : Fragment(), View.OnClickListener, OnDataLoaded {
                 }
                 deferredList.add(deferred)
             }
+
+            //Await for all of the mMovieFromApi is added
             deferredList.awaitAll()
             Log.d("How many movies?", mMovieListFromApi.size.toString())
             getCastAndCrewOfThoseMovies()
@@ -152,7 +159,6 @@ class AboutFragment : Fragment(), View.OnClickListener, OnDataLoaded {
 
         // Create a CountDownLatch with the size of mMovieListFromApi - the purpose? To prevent the application to process with unfinished data
         val latch = CountDownLatch(mMovieListFromApi.size)
-        Log.d("mMovieFromApi", mMovieListFromApi.size.toString())
         // Use a coroutine to make the network requests
         CoroutineScope(Dispatchers.IO).launch {
             for (mMovie in mMovieListFromApi) {
@@ -266,6 +272,7 @@ class AboutFragment : Fragment(), View.OnClickListener, OnDataLoaded {
     }
 
 
+    //For observing, don't have any value with the recommendation
     private fun writeJsonToFile(jsonString: String) {
         val file = File(context?.filesDir, "cast_and_crew.json")
 
@@ -281,7 +288,26 @@ class AboutFragment : Fragment(), View.OnClickListener, OnDataLoaded {
     override fun onClick(view: View) {
         when(view.id){
             R.id.movie_item -> {
-                Toast.makeText(context, "You clicked me", Toast.LENGTH_SHORT).show()
+                val position = view.tag as Int
+                val movieItem = orderedMovieList[position]
+                val bundle = Bundle()
+                bundle.putSerializable(Constant.MOVIE_KEY, movieItem)
+                val detailFragment = DetailFragment(mDatabaseOpenHelper)
+                detailFragment.setToolbarTitleListener(mToolbarTitleListener)
+                detailFragment.setBadgeListener(mBadgeListener)
+                detailFragment.setDetailListener(mDetailListener)
+                detailFragment.setRemindListener(mReminderListener)
+                detailFragment.arguments = bundle
+                requireActivity().supportFragmentManager.beginTransaction().apply {
+                    replace(
+                        R.id.recommendation_fragment,
+                         detailFragment,
+                        Constant.FRAGMENT_DETAIL_TAG
+                    )
+                    addToBackStack(null)
+                    commit()
+                    mToolbarTitleListener.onUpdateToolbarTitle(movieItem.title)
+                }
             }
         }
     }
@@ -298,6 +324,8 @@ class AboutFragment : Fragment(), View.OnClickListener, OnDataLoaded {
         numSimilarMovies: Int
     ): List<Int> {
         val similarityScore = mutableMapOf<Int, Double>()
+        Log.d("Movie to recommend", movieToRecommendList.size.toString())
+        Log.d("Movie Favorite List", movieFavoriteList.size.toString())
         for ((movieId, movieData) in movieToRecommendList) {
             val genreIds = movieData[Constant.GENRE_ID_KEY] as List<*>
             val actors = movieData[Constant.ACTOR_KEY] as List<*>
@@ -364,7 +392,7 @@ class AboutFragment : Fragment(), View.OnClickListener, OnDataLoaded {
     }
 
 
-    //Display the list of movies after jaccard
+    //Display the list of movies after jaccard, after jaccard, only ids present
     private fun getMoviesDetailOnId(movieIdList: List<Int>) {
         for (movieId in movieIdList) {
             val movie = mMovieListFromApi.find { it.id == movieId }

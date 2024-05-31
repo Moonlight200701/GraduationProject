@@ -29,8 +29,9 @@ class RecommendationAdapter(
     }
 
     override fun onBindViewHolder(holder: ListViewHolder, position: Int) {
-        holder.bindDataList(position)
-        holder.itemView.setOnClickListener( mViewClickListener)
+        holder.itemView.tag = position
+        holder.bind(position)
+        holder.itemView.setOnClickListener(mViewClickListener)
     }
 
     inner class ListViewHolder(itemView: View, private val mViewClickListener: OnClickListener) :
@@ -45,7 +46,7 @@ class RecommendationAdapter(
             itemView.findViewById(R.id.item_list_favourite_image_button)
         private var overviewText: TextView = itemView.findViewById(R.id.overview_text)
 
-        fun bindDataList(position: Int) {
+        fun bind(position: Int) {
             val movie = mMovieList[position]
             titleText.text = movie.title
             val url = APIConstant.BASE_IMG_URL + movie.posterPath

@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.Menu
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -63,7 +64,9 @@ class ReminderFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fr
 
     override fun onPrepareOptionsMenu(menu: Menu) {
         val item = menu.findItem(R.id.change_view)
+        val item2 = menu.findItem(R.id.action_search)
         item.isVisible = false
+        item2.isVisible = false
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -93,6 +96,10 @@ class ReminderFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fr
                             .commit()
                     }
                 }
+            }
+            .create().apply {
+                window?.attributes?.dimAmount = 0.9f
+                window?.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
             }
             .show()
     }

@@ -23,8 +23,9 @@
                 android:layout_height="100dp"
                 android:src="@drawable/admin_avatar" />
 
+
             <LinearLayout
-                android:layout_width="match_parent"
+                android:layout_width="238dp"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
@@ -45,17 +46,24 @@
                     android:layout_marginStart="5dp"
                     android:layout_marginTop="5dp"
                     android:text="@string/example_email"
-                    android:textSize="20sp" />
+                    android:textSize="15sp" />
 
                 <TextView
                     android:id="@+id/frg_account_status"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Status: Enabled"
                     android:layout_marginStart="5dp"
-                    android:layout_marginTop="5dp"/>
+                    android:layout_marginTop="5dp"
+                    android:text="Status: Enabled" />
 
             </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/frg_account_markButton"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:background="@drawable/ic_warning_24"
+                />
         </LinearLayout>
 
         <LinearLayout
@@ -71,6 +79,13 @@
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="15dp"
                 android:text="@string/disable_account" />
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/frg_account_deleteBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="15dp"
+                android:text="@string/terminate_account" />
 
         </LinearLayout>
     </LinearLayout>
