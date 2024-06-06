@@ -156,6 +156,15 @@
                 android:orientation="horizontal" />
         </androidx.cardview.widget.CardView>
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="5dp"
+            android:text="Trailers &amp; Behind the scenes"
+            android:textColor="@color/red"
+            android:textSize="20sp"
+            android:textStyle="bold|italic" />
+
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

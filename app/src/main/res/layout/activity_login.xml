@@ -33,7 +33,7 @@
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 tools:layout_editor_absoluteX="0dp"
-                android:text="Welcome Back!"
+                android:text="@string/welcome_back"
                 android:textColor="@color/teal_200"
                 android:textAlignment="center"
                 android:textSize="30sp"/>

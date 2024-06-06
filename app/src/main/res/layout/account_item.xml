@@ -17,11 +17,13 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal">
 
-            <ImageView
+            <de.hdodenhof.circleimageview.CircleImageView
                 android:id="@+id/frg_account_accountAvatar"
                 android:layout_width="100dp"
                 android:layout_height="100dp"
-                android:src="@drawable/admin_avatar" />
+                android:src="@drawable/admin_avatar"
+                android:layout_marginTop="5dp"
+                android:layout_marginStart="5dp"/>
 
 
             <LinearLayout

@@ -60,4 +60,6 @@
     <string name="female_gender">Female</string>
     <string name="gender">Gender:</string>
     <string name="please_verify_your_email">Please verify your email:</string>
+    <string name="search_by_name">Search by name</string>
+    <string name="welcome_back">Welcome Back!\n</string>
 </resources>

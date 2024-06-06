@@ -8,7 +8,32 @@
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <EditText
+                android:id="@+id/frg_admin_search_text"
+                android:layout_width="300dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:hint="@string/search_by_name"
+                android:inputType="text"
+                />
+
+            <ImageButton
+                android:id="@+id/frg_admin_search_button"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:background="@drawable/ic_search_black"
+                android:layout_marginStart="10dp"
+                />
+
+        </LinearLayout>
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/frg_admin_recyclerview"

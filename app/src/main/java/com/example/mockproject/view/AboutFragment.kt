@@ -6,9 +6,9 @@ import android.view.LayoutInflater
 import android.view.Menu
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.mockproject.R
@@ -27,13 +27,12 @@ import com.example.mockproject.listenercallback.ToolbarTitleListener
 import com.example.mockproject.model.CastAndCrew
 import com.example.mockproject.model.CastCrewList
 import com.example.mockproject.model.Movie
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import retrofit2.Call
@@ -45,7 +44,8 @@ import java.io.IOException
 import java.util.concurrent.CountDownLatch
 
 //This fragment is for recommending movies
-class AboutFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragment(), View.OnClickListener, OnDataLoaded {
+class AboutFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragment(),
+    View.OnClickListener, OnDataLoaded {
     //The movie from the API
     private var mMovieListFromApi = ArrayList<Movie>()
 
@@ -61,6 +61,7 @@ class AboutFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
 
     private lateinit var mRecommendationList: RecyclerView
     private lateinit var mMovieRecommendationAdapter: RecommendationAdapter
+    private lateinit var mLoadingIcon: ProgressBar
 
     private lateinit var mToolbarTitleListener: ToolbarTitleListener
     private lateinit var mBadgeListener: BadgeListener
@@ -68,6 +69,11 @@ class AboutFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
     private lateinit var mDetailListener: DetailListener
     private lateinit var mReminderListener: ReminderListener
 
+    private var currentUserId = FirebaseAuth.getInstance().currentUser!!.uid
+    private var fStore = FirebaseFirestore.getInstance().collection("Users").document(currentUserId)
+    private var role: String = ""
+
+    //Purpose of the listeners: Update
     fun setToolbarTitleListener(toolbarTitleListener: ToolbarTitleListener) {
         this.mToolbarTitleListener = toolbarTitleListener
     }
@@ -84,7 +90,7 @@ class AboutFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
         this.mReminderListener = reminderListener
     }
 
-    fun setMovieListener(movieListener: MovieListener){
+    fun setMovieListener(movieListener: MovieListener) {
         this.mMovieListener = movieListener
     }
 
@@ -103,13 +109,24 @@ class AboutFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
 //        val mMovieFavoriteData = arguments?.getSerializable("My favorite list") as? ArrayList<*>
 //        Log.d("Movie From Favorite", mMovieFavorite.toString())
 
-        //Get the dataSet
-        getSomeMovieForRecommendation()
+        fStore.get().addOnSuccessListener {
+            role = it.getString("isAdmin")!!
+        }.addOnFailureListener {
+            Log.d("isAdmin exception", "No such role in this document")
+        }
 
         //Initialize the recommendationList
         mRecommendationList.layoutManager = LinearLayoutManager(context)
-        mMovieRecommendationAdapter = RecommendationAdapter(mutableListOf(), this)
-        mRecommendationList.adapter = mMovieRecommendationAdapter
+
+        mMovieRecommendationAdapter = RecommendationAdapter(
+            mutableListOf(),
+            this
+        )
+
+        mLoadingIcon = view.findViewById(R.id.recommendation_loading)
+
+        //Get the dataSet
+        getSomeMovieForRecommendation()
     }
 
     override fun onPrepareOptionsMenu(menu: Menu) {
@@ -125,28 +142,30 @@ class AboutFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
 
         // Create a new coroutine to run the network requests
         CoroutineScope(Dispatchers.IO).launch {
-            val deferredList = mutableListOf<Deferred<Unit>>()
             for (page in 1..6) {
-                val deferred = async {
-                    try {
-                        val response = retrofit.getMovieListRecommendation("popular", APIConstant.API_KEY, page.toString()).execute()
-                        if (response.isSuccessful) {
-                            val responseBody = response.body()
-                            val movieGotFromAPI = responseBody?.results as ArrayList<Movie>
+                try {
+                    val response = retrofit.getMovieListRecommendation(
+                        "popular",
+                        APIConstant.API_KEY,
+                        page.toString()
+                    ).execute()
+                    if (response.isSuccessful) {
+                        val responseBody = response.body()
+                        val movieGotFromAPI = responseBody?.results as ArrayList<Movie>
+                        withContext(Dispatchers.Main) {
                             mMovieListFromApi.addAll(movieGotFromAPI)
                         }
-                    } catch (e: Exception) {
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(context, "Connection Error", Toast.LENGTH_SHORT).show()
-                        }
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "Connection Error", Toast.LENGTH_SHORT).show()
                     }
                 }
-                deferredList.add(deferred)
             }
 
-            //Await for all of the mMovieFromApi is added
-            deferredList.awaitAll()
             Log.d("How many movies?", mMovieListFromApi.size.toString())
+
+            // Now that all movies have been fetched, get the cast and crew
             getCastAndCrewOfThoseMovies()
         }
     }
@@ -207,7 +226,7 @@ class AboutFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
             withContext(Dispatchers.Main) {
                 getCastAndCrewForTheMovieFavorites()
 
-                //For observing purposes
+                //For observing purposes, doesn't have any purpose with the recommendation
                 val jsonString: String = gson.toJson(mMovieDataForRecommend)
                 writeJsonToFile(jsonString)
 
@@ -286,7 +305,7 @@ class AboutFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
     }
 
     override fun onClick(view: View) {
-        when(view.id){
+        when (view.id) {
             R.id.movie_item -> {
                 val position = view.tag as Int
                 val movieItem = orderedMovieList[position]
@@ -301,7 +320,7 @@ class AboutFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
                 requireActivity().supportFragmentManager.beginTransaction().apply {
                     replace(
                         R.id.recommendation_fragment,
-                         detailFragment,
+                        detailFragment,
                         Constant.FRAGMENT_DETAIL_TAG
                     )
                     addToBackStack(null)
@@ -318,53 +337,46 @@ class AboutFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
         mRecommendationList.adapter = mMovieRecommendationAdapter
     }
 
-    private fun getSimilarMovies(
-        movieToRecommendList: MutableMap<Int, MutableMap<String, Any>>,
-        movieFavoriteList: MutableMap<Int, MutableMap<String, Any>>,
-        numSimilarMovies: Int
-    ): List<Int> {
+    private fun getSimilarMovies(movieToRecommendList: MutableMap<Int, MutableMap<String, Any>>, movieFavoriteList: MutableMap<Int, MutableMap<String, Any>>, numSimilarMovies: Int): List<Int> {
         val similarityScore = mutableMapOf<Int, Double>()
         Log.d("Movie to recommend", movieToRecommendList.size.toString())
         Log.d("Movie Favorite List", movieFavoriteList.size.toString())
+
         for ((movieId, movieData) in movieToRecommendList) {
             val genreIds = movieData[Constant.GENRE_ID_KEY] as List<*>
             val actors = movieData[Constant.ACTOR_KEY] as List<*>
-//                val rating = movieData[Constant.VOTE_AVERAGE_KEY] as Double
-            if(movieId in movieFavoriteList) {
+
+            if (movieId in movieFavoriteList) {
                 continue
             }
+
+            var totalSimilarity = 0.0
+            var numSimilarities = 0
+
             for ((_, favMovieData) in movieFavoriteList) {
                 val favGenreIds = favMovieData[Constant.GENRE_ID_KEY] as List<*>
                 val favActors = favMovieData[Constant.ACTOR_KEY] as List<*>
-//                    val favRating = favMovieData[Constant.VOTE_AVERAGE_KEY] as Double
 
                 //Calculating Jaccard Similarity:
                 val genreIdIntersect = genreIds.intersect(favGenreIds.toSet()).size.toDouble()
-                Log.d("Genre Intersect", genreIdIntersect.toString())
                 val genreIdUnion = genreIds.union(favGenreIds).size.toDouble()
-                Log.d("Genre Union", genreIdUnion.toString())
                 val actorIntersect = actors.intersect(favActors.toSet()).size.toDouble()
                 val actorUnion = actors.union(favActors).size.toDouble()
-                val jaccardSimilarity =
-                    ((genreIdIntersect / genreIdUnion) + (actorIntersect / actorUnion)) / 2.0
-                //This is for more accurate suggestion, no need this
-//                val ratingSimilarity = 1 - abs(rating - favRating) / 10.0
-//
-//                val combinedSimilarity = 0.8 * jaccardSimilarity + 0.2 * ratingSimilarity
+                val jaccardSimilarity = ((genreIdIntersect / genreIdUnion) + (actorIntersect / actorUnion)) / 2.0
 
-                //The similarity Score map representing each movie score of similarity
-                similarityScore[movieId] = jaccardSimilarity
+                totalSimilarity += jaccardSimilarity
+                numSimilarities++
             }
-        }
-        val sortedSimilarityScore =
-            similarityScore.toList().sortedByDescending { (_, score) -> score }.toMap()
 
+            val averageSimilarity = if (numSimilarities > 0) totalSimilarity / numSimilarities else 0.0
+            similarityScore[movieId] = averageSimilarity
+        }
+
+        val sortedSimilarityScore = similarityScore.toList().sortedByDescending { (_, score) -> score }.toMap()
         Log.d("Similarity score", sortedSimilarityScore.toString())
         val topSimilarMoviesIds = sortedSimilarityScore.keys.take(numSimilarMovies)
         Log.d("Top similarMovie Ids", topSimilarMoviesIds.toString())
-//        val finalResult =
-//            movieToRecommendList.filterKeys { it in topSimilarMoviesIds }.keys.toList()
-//        Log.d("After Jaccard:", finalResult.toString())
+
         getMoviesDetailOnId(topSimilarMoviesIds)
         return topSimilarMoviesIds
     }
@@ -381,13 +393,20 @@ class AboutFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
         movieList: MutableMap<Int, MutableMap<String, Any>>,
         movieFavoriteList: MutableMap<Int, MutableMap<String, Any>>
     ) {
-        // Check if both recommended and favorite movie data are loaded
-        if (movieList.isNotEmpty() && movieFavoriteList.isNotEmpty()) {
-            // Perform similarity calculation
-            getSimilarMovies(movieList, movieFavoriteList, 5)
+        if (role == "1") {
+            // If the user is an admin, directly load all movies from mMovieListFromApi
+            orderedMovieList.addAll(mMovieListFromApi)
+            loadMovieRecommendationList(orderedMovieList)
         } else {
-            // Log a message or handle the case where data is not fully loaded
-            Log.d("AboutFragment", "Movie data is not fully loaded yet")
+            // If the user is not an admin, proceed with the similarity calculation
+            if (movieList.isNotEmpty() && movieFavoriteList.isNotEmpty()) {
+                mLoadingIcon.visibility = View.VISIBLE
+                // Perform similarity calculation
+                getSimilarMovies(movieList, movieFavoriteList, 5)
+            } else {
+                // Log a message or handle the case where data is not fully loaded
+                Log.d("AboutFragment", "Movie data is not fully loaded yet")
+            }
         }
     }
 
@@ -402,7 +421,10 @@ class AboutFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
             }
             Log.d("movie From api after sorting", orderedMovieList.toString())
         }
+        mLoadingIcon.visibility = View.GONE
     }
+
+
 }
 
 

@@ -87,12 +87,13 @@ class LoginActivity : AppCompatActivity() {
                                             ).show()
                                             fAuth.signOut()
                                         } else {
-                                            //cái này hơi thừa, vì minh co the goi trong main activity
+                                            //a little not necessary as i can call this from the main activity
                                             val email = document.getString("Email")
                                             val name = document.getString("FullName")
                                             val isAdmin = document.getString("isAdmin")
                                             val birthday = document.getString("Birthday")
                                             val gender = document.getString("Gender")
+                                            val avatar = document.getString("Avatar")
 
                                             Log.d("From firebase", name.toString())
                                             Toast.makeText(
@@ -104,6 +105,8 @@ class LoginActivity : AppCompatActivity() {
 
                                             val intent = Intent(this, MainActivity::class.java)
 
+                                            //In case if the user changed the password through the forgot pass/ change pass
+                                            //If password doesn't change, nothing happens
                                             updatePassword(mPassword)
 
                                             //No need to sync when the admin logs in
@@ -129,6 +132,7 @@ class LoginActivity : AppCompatActivity() {
                                                     intent.putExtra("isAdmin", isAdmin)
                                                     intent.putExtra("Birthday", birthday)
                                                     intent.putExtra("Gender", gender)
+                                                    intent.putExtra("Avatar", avatar)
                                                     startActivity(intent)
                                                     finish()
                                                 }
@@ -217,7 +221,7 @@ class LoginActivity : AppCompatActivity() {
     }
 
 
-    //Save the current login time for the admin
+    //Save the current login time for the admin the observe the last login of the user
     private fun saveTheSignInTime() {
         val user = fAuth.currentUser
         if (user != null) {

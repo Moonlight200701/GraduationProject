@@ -1,5 +1,6 @@
 package com.example.mockproject.view
 
+import android.annotation.SuppressLint
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.os.Handler
@@ -114,13 +115,13 @@ class MovieFragment(
         loadDataBySetting()
         updateMovieList()
         mHandler.postDelayed({
-            getMovieListFromApi(false, false, null)
+            getMovieListFromApi(isRefresh = false, isLoadMore = false, query = null)
         }, 1000)
 
         mSwipeRefreshLayout.setOnRefreshListener {
             mHandler.postDelayed({
                 updateMovieList()
-                getMovieListFromApi(true, false, null)
+                getMovieListFromApi(isRefresh = true, isLoadMore = false, query = null)
             }, 1000)
         }
         onLoadMoreListener()
@@ -247,6 +248,7 @@ class MovieFragment(
         }, 1000)
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     fun changeView() {
         if (mMovieRecyclerView.layoutManager == mGridLayoutManager) {
             mViewType = MovieAdapter.TYPE_LIST
@@ -260,6 +262,7 @@ class MovieFragment(
         mMovieAdapter.notifyDataSetChanged()
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     fun updateMovieList(movie: Movie, isFavourite: Boolean) {
         mMovieList.forEach {
             if (it.id == movie.id) {
@@ -331,6 +334,7 @@ class MovieFragment(
         }
 
         retrofitData.enqueue(object : Callback<MovieList?> {
+            @SuppressLint("NotifyDataSetChanged")
             override fun onResponse(call: Call<MovieList?>, response: Response<MovieList?>) {
                 //Remove the loading icon
                 mMovieAdapter.removeItemLoading()

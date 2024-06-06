@@ -3,6 +3,7 @@ package com.example.mockproject.view
 
 import android.annotation.SuppressLint
 import android.app.AlertDialog
+import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -11,6 +12,10 @@ import android.view.View
 import android.view.View.OnClickListener
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
+import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
@@ -26,11 +31,17 @@ import com.google.firebase.firestore.firestore
 //Purpose of database param? delete the movie in the local as well if i want to delete the user
 class AdminFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragment(),
     OnClickListener {
+    //Search actions
+    private lateinit var searchButton: ImageButton
+    private lateinit var searchEt: EditText
+
     private lateinit var mAccountAdapter: AccountAdapter
     private lateinit var mAccountRecyclerView: RecyclerView
-    private var accountList = mutableListOf<Account>()
+    private var accountList = arrayListOf<Account>()
     private var fStore = Firebase.firestore
     private var mDocRef = fStore.collection(Constant.COLLECTION_NAME)
+
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -64,6 +75,7 @@ class AdminFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
                     val createdTime = document.getString("CreatedTime") ?: "Unknown"
                     val lastLoginTime = document.getString("Last Login time") ?: "Unknown"
                     val marked = document.getBoolean("Marked") ?: false
+                    val avatar = document.getString("Avatar") ?: ""
                     accountList.add(
                         Account(
                             id,
@@ -74,7 +86,8 @@ class AdminFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
                             status,
                             createdTime,
                             lastLoginTime,
-                            marked
+                            marked,
+                            avatar
                         )
                     )
                 }
@@ -83,6 +96,45 @@ class AdminFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
         mAccountAdapter = AccountAdapter(accountList = accountList, this)
         mAccountRecyclerView.adapter = mAccountAdapter
 
+        //Search Button
+        searchEt = view.findViewById(R.id.frg_admin_search_text)
+        searchButton = view.findViewById(R.id.frg_admin_search_button)
+
+        searchEt.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                // Clear focus here from EditText
+                searchEt.clearFocus()
+                //Hide the keyboard
+                val imm = requireActivity().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                imm.hideSoftInputFromWindow(searchEt.windowToken, 0)
+
+                handleSearch(searchEt.text.toString())
+                return@setOnEditorActionListener true
+            }
+            return@setOnEditorActionListener false
+        }
+
+        searchButton.setOnClickListener {
+            handleSearch(searchEt.text.toString())
+        }
+
+    }
+
+    private fun handleSearch(searchName: String) {
+        if (searchName.trim().isNotEmpty()) {
+            val matchingAccounts = accountList.filter {
+                it.userName.contains(
+                    searchName,
+                    ignoreCase = true
+                ) || it.email.contains(searchName, ignoreCase = true)
+            } as ArrayList<Account>
+            searchEt.clearFocus()
+            mAccountAdapter = AccountAdapter(accountList = matchingAccounts, this)
+            mAccountRecyclerView.adapter = mAccountAdapter
+        } else {
+            mAccountAdapter = AccountAdapter(accountList = accountList, this)
+            mAccountRecyclerView.adapter = mAccountAdapter
+        }
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -112,13 +164,14 @@ class AdminFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
         mDocRef.document(accountItem.accountId).get().addOnSuccessListener {
             val isMarked = it.getBoolean("Marked")
             val newMarked: HashMap<String, Any>
-            if(isMarked == false){
+            if (isMarked == false) {
                 newMarked = hashMapOf("Marked" to true)
                 mDocRef.document(accountItem.accountId).update(newMarked).addOnSuccessListener {
                     accountItem.marked = newMarked["Marked"] as Boolean
-                    Toast.makeText(context, "Marked the account successfully", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Marked the account successfully", Toast.LENGTH_SHORT)
+                        .show()
                     mAccountAdapter.notifyItemChanged(position)
-                }.addOnFailureListener{
+                }.addOnFailureListener {
                     Toast.makeText(context, "Unexpected error occurs", Toast.LENGTH_SHORT).show()
                 }
 
@@ -126,9 +179,10 @@ class AdminFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
                 newMarked = hashMapOf("Marked" to false)
                 mDocRef.document(accountItem.accountId).update(newMarked).addOnSuccessListener {
                     accountItem.marked = newMarked["Marked"] as Boolean
-                    Toast.makeText(context, "Unmarked the account successfully", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Unmarked the account successfully", Toast.LENGTH_SHORT)
+                        .show()
                     mAccountAdapter.notifyItemChanged(position)
-                }.addOnFailureListener{
+                }.addOnFailureListener {
                     Toast.makeText(context, "Unexpected error occurs", Toast.LENGTH_SHORT).show()
                 }
 
@@ -153,9 +207,14 @@ class AdminFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
             dialogBuilder2.setMessage("Are you REALLY sure you want to terminate this account??")
             dialogBuilder2.setPositiveButton("Yes") { dialog2, _ ->
                 mDocRef.document(accountItem.accountId).delete().addOnCompleteListener {
-                    if(it.isSuccessful){
-                        Toast.makeText(context, "Account terminated, cannot redo :<", Toast.LENGTH_SHORT).show()
+                    if (it.isSuccessful) {
+                        Toast.makeText(
+                            context,
+                            "Account terminated, cannot redo :<",
+                            Toast.LENGTH_SHORT
+                        ).show()
                         accountList.removeAt(position)
+                        mDatabaseOpenHelper.deleteMovieByUser(accountItem.accountId)
                         mAccountAdapter.notifyDataSetChanged()
                     }
                 }

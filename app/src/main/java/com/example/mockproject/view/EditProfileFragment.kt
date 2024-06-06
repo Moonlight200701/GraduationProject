@@ -58,8 +58,8 @@ class EditProfileFragment : Fragment() {
     private lateinit var mProfileListener: ProfileListener
 
     //Firebase
-    private var fAuth = FirebaseAuth.getInstance()
-    private val user: FirebaseUser? = fAuth.currentUser
+//    private var fAuth = FirebaseAuth.getInstance()
+//    private val user: FirebaseUser? = fAuth.currentUser
 
     fun setToolbarTitleListener(toolbarTitleListener: ToolbarTitleListener) {
         this.mToolbarTitleListener = toolbarTitleListener
@@ -106,7 +106,7 @@ class EditProfileFragment : Fragment() {
             } else {
                 mProfileListener.onSaveProfile(name, email, birthday, mIsMale, mProfileBitmap)
                 requireActivity().supportFragmentManager.beginTransaction().remove(this).commit()
-//                Toast.makeText(context, "Save changes successfully", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Save changes successfully", Toast.LENGTH_SHORT).show()
             }
         }
         mCancelBtn = view.findViewById(R.id.btn_cancel)

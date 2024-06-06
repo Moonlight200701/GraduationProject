@@ -1,6 +1,7 @@
 package com.example.mockproject
 
 import android.Manifest
+import android.app.AlertDialog
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.SearchManager
@@ -16,6 +17,7 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.WindowManager
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -134,7 +136,22 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
             userId = mUser.uid
         }
 
-        //<Sync data from firestore here>
+        mDocRef.get().addOnSuccessListener {
+            val isAdmin = it.getString("isAdmin")
+            if(isAdmin != null && isAdmin != "1") {
+                val isMarked = it.getBoolean("Marked")!!
+                if (isMarked) {
+                    val dialogBuilder = AlertDialog.Builder(this)
+                    val dialog = dialogBuilder.create()
+                    dialog.setCancelable(true)
+                    dialog.setTitle("Attention")
+                    dialog.setMessage("You have been marked by the admin")
+                    dialog.window?.attributes?.dimAmount = 0.9f
+                    dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+                    dialog.show()
+                }
+            }
+        }
 
         mTabTitleList = mutableListOf(
             "Movie", "Favorite", "Setting", "Suggest", "Accounts"
@@ -206,9 +223,25 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         mChangePassBtn = mHeaderLayout.findViewById(R.id.btn_change_password)
 
         mLogOutBtn.setOnClickListener {
-            FirebaseAuth.getInstance().signOut()
-            startActivity(Intent(this, LoginActivity::class.java))
-            finish()
+            val dialogBuilder2 = AlertDialog.Builder(this)
+            dialogBuilder2.setCancelable(true)
+            dialogBuilder2.setTitle("Confirmation")
+            dialogBuilder2.setMessage("Are you sure you want to log out?")
+            dialogBuilder2.setPositiveButton("Yes") { dialog2, _ ->
+                FirebaseAuth.getInstance().signOut()
+                startActivity(Intent(this, LoginActivity::class.java))
+                dialog2.dismiss()
+                finish()
+
+            }
+            dialogBuilder2.setNegativeButton("No") { dialog2, _ ->
+                dialog2.dismiss()
+            }
+            val dialog2 = dialogBuilder2.create()
+            dialog2.window?.attributes?.dimAmount = 0.9f
+            dialog2.window?.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            dialog2.show()
+
         }
 
         mChangePasswordFragment = ChangePasswordFragment()
@@ -232,10 +265,11 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
             val bundle = Bundle()
             bundle.putString(
                 Constant.PROFILE_AVATAR_KEY,
-                mProfileSharedPreferences.getString(
-                    Constant.PROFILE_AVATAR_KEY,
-                    Constant.PROFILE_AVATAR_DEFAULT
-                )
+//                mProfileSharedPreferences.getString(
+//                    Constant.PROFILE_AVATAR_KEY,
+//                    Constant.PROFILE_AVATAR_DEFAULT
+//                )
+                intent.getStringExtra("Avatar")
             )
             bundle.putString(Constant.PROFILE_NAME_KEY, mNameText.text.toString())
             bundle.putString(Constant.PROFILE_EMAIL_KEY, mEmailText.text.toString())
@@ -482,23 +516,23 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         avatarBitmap: Bitmap?
     ) {
         supportActionBar!!.title = mTabTitleList[0]
-        val edit = mProfileSharedPreferences.edit()
-        if (avatarBitmap != null) {
-            edit.putString(Constant.PROFILE_AVATAR_KEY, mBitmapConverter.encodeBase64(avatarBitmap))
+//        val edit = mProfileSharedPreferences.edit()
+        val bitmapString = if (avatarBitmap != null) {
+            mBitmapConverter.encodeBase64(avatarBitmap)
+        } else {
+            null
         }
+//        edit.putString(Constant.PROFILE_AVATAR_KEY, bitmapString)
 //        edit.putString(Constant.PROFILE_NAME_KEY, name)
 //        edit.putString(Constant.PROFILE_EMAIL_KEY, email)
 //        edit.putString(Constant.PROFILE_BIRTHDAY_KEY, birthday)
 //        edit.putBoolean(Constant.PROFILE_GENDER_KEY, isMale)
-        edit.apply()
+//        edit.apply()
 
         //Update UI
         mAvatarImg.setImageBitmap(avatarBitmap)
         Log.d("AvatarBitmap", mAvatarImg.toString())
-        mNameText.text = mProfileSharedPreferences.getString(
-            Constant.PROFILE_NAME_KEY,
-            Constant.PROFILE_NAME_DEFAULT
-        )
+        mNameText.text = name
         mEmailText.text = email
         mBirthDayText.text = birthday
         if (isMale) {
@@ -512,6 +546,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
             "Email" to email,
             "Birthday" to mBirthDayText.text,
             "Gender" to mGenderText.text,
+            "Avatar" to bitmapString.toString()
         )
 
         mDocRef.get().addOnSuccessListener { documentSnapshot ->
@@ -642,10 +677,11 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         try {
             mAvatarImg.setImageBitmap(
                 mBitmapConverter.decodeBase64(
-                    mProfileSharedPreferences.getString(
-                        Constant.PROFILE_AVATAR_KEY,
-                        Constant.PROFILE_AVATAR_DEFAULT
-                    )
+//                    mProfileSharedPreferences.getString(
+//                        Constant.PROFILE_AVATAR_KEY,
+//                        Constant.PROFILE_AVATAR_DEFAULT
+//                    )
+                    intent.getStringExtra("Avatar")
                 )
             )
         } catch (e: Exception) {

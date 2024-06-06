@@ -1,5 +1,6 @@
 package com.example.mockproject.view
 
+import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
@@ -227,7 +228,7 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
                                 mFavouriteBtn.setImageResource(R.drawable.ic_star_outline_24)
                                 mDetailListener.onUpdateFromDetail(mMovie, false)
                                 mBadgeListener.onUpdateBadgeNumber(false)
-                                Toast.makeText(context, "Delete successfully", Toast.LENGTH_SHORT)
+                                Toast.makeText(context, "Deleted successfully", Toast.LENGTH_SHORT)
                                     .show()
                             }.addOnFailureListener {
                                 // Handle failure
@@ -236,6 +237,7 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
                                 ).show()
                             }
                     } else {
+                        //This is for writing the data to the firestore, also create a new data in the local database
                         mMovie.isFavorite = true
                         mDatabaseOpenHelper.addMovie(mMovie, userId)
                         mDatabaseOpenHelper.addMovieGenres(mMovie.id, mMovie.genreIds)
@@ -282,17 +284,16 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
         val retrofitData = retrofit.getCastAndCrew(mMovie.id, APIConstant.API_KEY)
 
         retrofitData.enqueue(object : Callback<CastCrewList?> {
-            override fun onResponse(
-                call: Call<CastCrewList?>?, response: Response<CastCrewList?>?
-            ) {
-                val responseBody = response!!.body()
+            @SuppressLint("NotifyDataSetChanged")
+            override fun onResponse(call: Call<CastCrewList?>, response: Response<CastCrewList?>) {
+                val responseBody = response.body()
                 mCastAndCrewList.addAll(responseBody!!.castList)
                 mCastAndCrewList.addAll(responseBody.crewList)
                 Log.d("Cast and crew list", responseBody.toString())
                 mCastAndCrewAdapter.notifyDataSetChanged()
             }
 
-            override fun onFailure(call: Call<CastCrewList?>?, t: Throwable?) {
+            override fun onFailure(call: Call<CastCrewList?>, t: Throwable) {
             }
         })
     }

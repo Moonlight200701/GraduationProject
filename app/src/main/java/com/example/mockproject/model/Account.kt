@@ -9,5 +9,6 @@ data class Account(
     var status: String,
     val createdTime: String,
     val lastLoginTime: String,
-    var marked: Boolean
+    var marked: Boolean,
+    val avatar: String
 )

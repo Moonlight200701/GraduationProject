@@ -1,19 +1,23 @@
 package com.example.mockproject.adapters
 
 import android.annotation.SuppressLint
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.View.OnClickListener
 import android.view.ViewGroup
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.widget.AppCompatButton
 import androidx.recyclerview.widget.RecyclerView
 import com.example.mockproject.R
 import com.example.mockproject.model.Account
+import com.example.mockproject.util.BitmapConverter
+import de.hdodenhof.circleimageview.CircleImageView
 
 class AccountAdapter(
-    private val accountList: MutableList<Account>,
+    private val accountList: ArrayList<Account>,
     private var mViewClickListener: OnClickListener,
 
     ) : RecyclerView.Adapter<AccountAdapter.AccountViewHolder>() {
@@ -27,6 +31,7 @@ class AccountAdapter(
         private val deleteButton: AppCompatButton =
             itemView.findViewById(R.id.frg_account_deleteBtn)
         private val markButton: ImageButton = itemView.findViewById(R.id.frg_account_markButton)
+        private val accountAvatar: CircleImageView = itemView.findViewById(R.id.frg_account_accountAvatar)
 
         @SuppressLint("SetTextI18n")
         fun bind(position: Int) {
@@ -34,6 +39,16 @@ class AccountAdapter(
             accountName.text = account.userName
             accountEmail.text = account.email
             accountStatus.text = "Status: ${account.status}"
+            if(account.avatar == "null"){
+
+                Log.d("No avatar", "Dude doesn't like selfie :|")
+            } else {
+                accountAvatar.setImageBitmap(
+                    BitmapConverter().decodeBase64(
+                        account.avatar
+                    )
+                )
+            }
             //Button
             disableButton.tag = position
             deleteButton.tag = position
@@ -48,7 +63,7 @@ class AccountAdapter(
                 disableButton.setText(R.string.disable_account)
             }
 
-            if(!account.marked){
+            if (!account.marked) {
                 markButton.setBackgroundResource(R.drawable.ic_ok_faces_24)
             } else {
                 markButton.setBackgroundResource(R.drawable.ic_warning_24)
