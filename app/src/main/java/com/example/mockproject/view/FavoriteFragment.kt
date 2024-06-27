@@ -40,7 +40,8 @@ class FavoriteFragment(
     private lateinit var mFavoriteToRecommendListener: FavoriteToRecommendListener
 
     //Firebase
-    private lateinit var fAuth: FirebaseAuth
+    private var fAuth = FirebaseAuth.getInstance()
+
 
     fun setToolbarTitleListener(toolbarTitleListener: ToolbarTitleListener) {
         this.mToolbarTitleListener = toolbarTitleListener
@@ -114,6 +115,7 @@ class FavoriteFragment(
                 val movieItem: Movie = mMovieFavouriteList[position]
                 val bundle = Bundle()
                 bundle.putSerializable(Constant.MOVIE_KEY, movieItem)
+                bundle.putSerializable(Constant.PREVIOUS_FRAGMENT_KEY, "Favorite")
                 val detailFragment = DetailFragment(mDatabaseOpenHelper)
                 detailFragment.setToolbarTitleListener(mToolbarTitleListener)
                 detailFragment.setBadgeListener(mBadgeListener)
@@ -138,7 +140,7 @@ class FavoriteFragment(
     }
 
     private fun loadFavouriteList() {
-        mMovieAdapter = MovieAdapter(mMovieFavouriteList, MovieAdapter.TYPE_LIST, this, true)
+        mMovieAdapter = MovieAdapter(mMovieFavouriteList, MovieAdapter.TYPE_LIST, this, true, "")
         mMovieRecyclerView.layoutManager = LinearLayoutManager(activity)
         mMovieRecyclerView.setHasFixedSize(true)
         mMovieRecyclerView.adapter = mMovieAdapter
@@ -171,5 +173,4 @@ class FavoriteFragment(
 //        mFavoriteToRecommendListener.fromFavoriteToRecommendation(mMovieFavouriteList)
 
     }
-
 }

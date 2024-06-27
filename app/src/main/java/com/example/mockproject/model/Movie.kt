@@ -16,5 +16,6 @@ data class Movie(
     var isFavorite: Boolean = false,
     var reminderTime: String = "",
     var reminderTimeDisplay: String = "",
-    var userId: String? = null
+    var userId: String? = null,
+    var location: String = ""
 ) : Serializable

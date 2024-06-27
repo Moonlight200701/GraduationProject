@@ -136,6 +136,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
             userId = mUser.uid
         }
 
+        //Show the user if the admin marked them or not
         mDocRef.get().addOnSuccessListener {
             val isAdmin = it.getString("isAdmin")
             if(isAdmin != null && isAdmin != "1") {
@@ -164,7 +165,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
             R.drawable.ic_admin_24
         )
         getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        mProfileSharedPreferences = getSharedPreferences(PROFILE_PREF, MODE_PRIVATE)
+//        mProfileSharedPreferences = getSharedPreferences(PROFILE_PREF, MODE_PRIVATE)
 
         //Get the stored movie
         mDatabaseOpenHelper = DatabaseOpenHelper(this, null)
@@ -248,6 +249,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
 //        mChangePasswordFragment.setToolbarTitleListener(this)
         mChangePassBtn.setOnClickListener {
             supportFragmentManager.beginTransaction().apply {
+                setCustomAnimations(R.anim.nav_default_enter_anim,R.anim.nav_default_exit_anim)
                 add(
                     R.id.layout_main,
                     mChangePasswordFragment,
@@ -281,6 +283,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
             mEditProfileFragment.setProfileListener(this)
             mEditProfileFragment.arguments = bundle
             supportFragmentManager.beginTransaction().apply {
+                setCustomAnimations(R.anim.nav_default_enter_anim,R.anim.nav_default_exit_anim)
                 add(
                     R.id.layout_main,
                     mEditProfileFragment,
@@ -324,13 +327,6 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         }
         createNotificationChannel()
 
-//        val userName = intent.getStringExtra("Username")
-//        mNameText.text = userName
-//        val email = intent.getStringExtra("Email")
-//        mEmailText.text = email
-//        val isAdmin = intent.getStringExtra("isAdmin")
-//
-
     }
 
     override fun onBackPressed() {
@@ -339,6 +335,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         } else {
             val fragmentManager = supportFragmentManager
             if (fragmentManager.backStackEntryCount > 0) {
+                //If there is still a fragment that is added, pop it out
                 fragmentManager.popBackStack()
             } else {
                 if (backPressedCount <= 0) {
@@ -495,6 +492,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
 
         val bundle = Bundle()
         bundle.putSerializable(Constant.MOVIE_KEY, movie)
+        bundle.putSerializable(Constant.PREVIOUS_FRAGMENT_KEY, "Movie")
         val detailFragment = DetailFragment(mDatabaseOpenHelper)
         detailFragment.setToolbarTitleListener(this)
         detailFragment.setBadgeListener(this)
@@ -700,6 +698,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
 
     //Load the reminder of each users
     private fun loadReminderList() {
+        //Load the current user's reminder list
         var userId = ""
         if (mUser != null) {
             userId = mUser.uid

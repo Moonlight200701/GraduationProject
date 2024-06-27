@@ -1,6 +1,7 @@
 package com.example.mockproject.view
 
 import android.annotation.SuppressLint
+import android.app.AlertDialog
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.os.Handler
@@ -9,6 +10,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.RelativeLayout
 import android.widget.Toast
 import androidx.fragment.app.Fragment
@@ -68,7 +70,10 @@ class MovieFragment(
 
     //Firebase
     private var fAuth = FirebaseAuth.getInstance()
+    private var fStore = FirebaseFirestore.getInstance()
     private val user: FirebaseUser? = fAuth.currentUser
+    private var isAdmin: String = ""
+    private val df = fStore.collection("Users").document(user!!.uid).collection("Black List")
 
     //Search
     private var searchQuery: String? = null
@@ -105,31 +110,23 @@ class MovieFragment(
         mMovieRecyclerView = rootView.findViewById(R.id.movie_recycle)
         mHandler = Handler(Looper.getMainLooper())
 
-
         if (user != null) {
             val userId = user.uid
             mMovieListDB = mDatabaseOpenHelper.getListMovie(userId)
         }
         Log.d("mMovieDB", mMovieListDB.toString())
-
-        loadDataBySetting()
-        updateMovieList()
-        mHandler.postDelayed({
-            getMovieListFromApi(isRefresh = false, isLoadMore = false, query = null)
-        }, 1000)
-
-        mSwipeRefreshLayout.setOnRefreshListener {
-            mHandler.postDelayed({
-                updateMovieList()
-                getMovieListFromApi(isRefresh = true, isLoadMore = false, query = null)
-            }, 1000)
-        }
-        onLoadMoreListener()
         return rootView
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        fetchAdminStatus()
     }
 
     override fun onClick(view: View) {
         when (view.id) {
+            //If the user logged in, handle the button as usual, if the admin logged in, handle the button the admin way :>
             R.id.item_list_favourite_image_button -> {
                 val position = view.tag as Int
                 Log.d("MovieTag", view.tag.toString())
@@ -140,61 +137,75 @@ class MovieFragment(
                 if (user != null) {
                     val userId = user.uid
                     val db = FirebaseFirestore.getInstance()
-                    val favoritesRef =
-                        db.collection("Users").document(userId).collection("Favorites")
-                    if (movieItem.isFavorite) {
-                        movieItem.isFavorite = false
-                        mDatabaseOpenHelper.deleteMovie(movieItem.id, userId)
-                        favoritesRef.document(movieItem.id.toString()).delete()
-                            .addOnSuccessListener {
-                                // Delete successful
-                                mMovieAdapter.notifyItemChanged(position)
-                                mMovieListDB.remove(movieItem)
-                                mBadgeListener.onUpdateBadgeNumber(false)
-                                mMovieListener.onUpdateFromMovie(movieItem, false)
-                                Toast.makeText(context, "Remove successfully", Toast.LENGTH_SHORT)
-                                    .show()
-                            }
-                            .addOnFailureListener {
-                                // Handle failure
-                                Toast.makeText(
-                                    context,
-                                    "Remove Failed ${movieItem.id}",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
+                    Log.d("isAdmin", isAdmin + "onClick")
+                    //To change the favorite button's click event if the admin logged in
+                    if (isAdmin == "1") {
+                        Toast.makeText(context, "You clicked me", Toast.LENGTH_SHORT).show()
+                        handleAdminButtonClick(position)
                     } else {
-                        movieItem.isFavorite = true
-                        mDatabaseOpenHelper.addMovie(movieItem, userId)
-                        mDatabaseOpenHelper.addMovieGenres(movieItem.id, movieItem.genreIds)
-                        val favoriteData = hashMapOf(
-                            "id" to movieItem.id,
-                            "title" to movieItem.title,
-                            "poster path" to movieItem.posterPath,
-                            "overview" to movieItem.overview,
-                            "vote average" to movieItem.voteAverage,
-                            "release date" to movieItem.releaseDate,
-                            "genre ids" to movieItem.genreIds,
-                            "adult" to movieItem.adult,
-                            "isFavorite" to movieItem.isFavorite
+                        //Handle the favorite button as usual
+                        val favoritesRef =
+                            db.collection("Users").document(userId).collection("Favorites")
+                        if (movieItem.isFavorite) {
+                            movieItem.isFavorite = false
+                            mDatabaseOpenHelper.deleteMovie(movieItem.id, userId)
+                            favoritesRef.document(movieItem.id.toString()).delete()
+                                .addOnSuccessListener {
+                                    // Delete successful
+                                    mMovieAdapter.notifyItemChanged(position)
+                                    mMovieListDB.remove(movieItem)
+                                    //TO update the number badge of the tab favorite
+                                    mBadgeListener.onUpdateBadgeNumber(false)
+                                    //Mark the movie as not favorite
+                                    mMovieListener.onUpdateFromMovie(movieItem, false)
+                                    Toast.makeText(
+                                        context,
+                                        "Remove successfully",
+                                        Toast.LENGTH_SHORT
+                                    )
+                                        .show()
+                                }
+                                .addOnFailureListener {
+                                    // Handle failure
+                                    Toast.makeText(
+                                        context,
+                                        "Remove Failed ${movieItem.id}",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                        } else {
+                            movieItem.isFavorite = true
+                            mDatabaseOpenHelper.addMovie(movieItem, userId)
+                            mDatabaseOpenHelper.addMovieGenres(movieItem.id, movieItem.genreIds)
+                            val favoriteData = hashMapOf(
+                                "id" to movieItem.id,
+                                "title" to movieItem.title,
+                                "poster path" to movieItem.posterPath,
+                                "overview" to movieItem.overview,
+                                "vote average" to movieItem.voteAverage,
+                                "release date" to movieItem.releaseDate,
+                                "genre ids" to movieItem.genreIds,
+                                "adult" to movieItem.adult,
+                                "isFavorite" to movieItem.isFavorite
 
-                        )
-                        favoritesRef.document(movieItem.id.toString()).set(favoriteData)
-                            .addOnSuccessListener {
-                                // Add successful
-                                mMovieAdapter.notifyItemChanged(position)
-                                mMovieListDB.add(movieItem)
-                                mBadgeListener.onUpdateBadgeNumber(true)
-                                mMovieListener.onUpdateFromMovie(movieItem, true)
-                            }
-                            .addOnFailureListener {
-                                // Handle failure
-                                Toast.makeText(
-                                    context,
-                                    "Add Failed ${movieItem.id}",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
+                            )
+                            favoritesRef.document(movieItem.id.toString()).set(favoriteData)
+                                .addOnSuccessListener {
+                                    // Add successful
+                                    mMovieAdapter.notifyItemChanged(position)
+                                    mMovieListDB.add(movieItem)
+                                    mBadgeListener.onUpdateBadgeNumber(true)
+                                    mMovieListener.onUpdateFromMovie(movieItem, true)
+                                }
+                                .addOnFailureListener {
+                                    // Handle failure
+                                    Toast.makeText(
+                                        context,
+                                        "Add Failed ${movieItem.id}",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                        }
                     }
                 }
             }
@@ -204,6 +215,7 @@ class MovieFragment(
                 val movieItem: Movie = mMovieList[position]
                 val bundle = Bundle()
                 bundle.putSerializable(Constant.MOVIE_KEY, movieItem)
+                bundle.putSerializable(Constant.PREVIOUS_FRAGMENT_KEY, "Movie")
                 val detailFragment = DetailFragment(mDatabaseOpenHelper)
                 detailFragment.setToolbarTitleListener(mToolbarTitleListener)
                 detailFragment.setBadgeListener(mBadgeListener)
@@ -211,6 +223,7 @@ class MovieFragment(
                 detailFragment.setRemindListener(mReminderListener)
                 detailFragment.arguments = bundle
                 requireActivity().supportFragmentManager.beginTransaction().apply {
+                    setCustomAnimations(R.anim.nav_default_enter_anim,R.anim.nav_default_exit_anim)
                     replace(
                         R.id.movie_fragment_content,
                         detailFragment,
@@ -224,13 +237,84 @@ class MovieFragment(
         }
     }
 
+    private fun handleAdminButtonClick(position: Int) {
+        val movieItem: Movie = mMovieList[position]
+        val dialogBuilder2 = AlertDialog.Builder(context)
+        df.document(movieItem.id.toString()).get().addOnSuccessListener {
+            //If it exists that means the admin wants to delete it from the black list
+            if (it.exists()) {
+                dialogBuilder2.setCancelable(true)
+                dialogBuilder2.setTitle("Confirmation")
+                dialogBuilder2.setMessage("Are you sure you want to remove this movie from the black list?")
+                dialogBuilder2.setPositiveButton("Ok") { currentDialog, _ ->
+                    df.document(movieItem.id.toString()).delete().addOnSuccessListener {
+                        Toast.makeText(
+                            context,
+                            "Removed successfully, showing this to users :>",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        currentDialog.dismiss()
+                    }.addOnFailureListener {
+                        Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
+                        currentDialog.dismiss()
+                    }
+                }
+                dialogBuilder2.setNegativeButton("Cancel") { currentDialog, _ ->
+                    currentDialog.dismiss()
+                }
+                val dialog = dialogBuilder2.create()
+                dialog.window?.attributes?.dimAmount =
+                    0.9f // Set this value between 0.0f and 1.0f to control the darkness
+                dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+                dialog.show()
+            } else {
+                //Not exist? that means the admin is adding it to the blacklist so no user can see it
+                val blacklistItem = hashMapOf(
+                    "id" to movieItem.id,
+                    "title" to movieItem.title,
+                    "poster_path" to movieItem.posterPath,
+                    "overview" to movieItem.overview,
+                    "vote_average" to movieItem.voteAverage,
+                    "release_date" to movieItem.releaseDate,
+                    "genre_ids" to movieItem.genreIds,
+                )
+                dialogBuilder2.setCancelable(true)
+                dialogBuilder2.setTitle("Confirmation")
+                dialogBuilder2.setMessage("Are you sure you want to add this movie to the black list?")
+                dialogBuilder2.setPositiveButton("Ok") { currentDialog, _ ->
+                    df.document(movieItem.id.toString()).set(blacklistItem).addOnSuccessListener {
+                        Toast.makeText(
+                            context,
+                            "Added to the black list successfully, not showing this to users :>",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        currentDialog.dismiss()
+                    }.addOnFailureListener {
+                        Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
+                        currentDialog.dismiss()
+                    }
+                }
+                dialogBuilder2.setNegativeButton("Cancel") { currentDialog, _ ->
+                    currentDialog.dismiss()
+                }
+                val dialog = dialogBuilder2.create()
+                dialog.window?.attributes?.dimAmount =
+                    0.9f // Set this value between 0.0f and 1.0f to control the darkness
+                dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+                dialog.show()
+
+            }
+        }
+
+    }
+
     private fun updateMovieList() {
         mCurrentPage = 1
         mMovieList = ArrayList()
         mLinearLayoutManager = LinearLayoutManager(activity)
         mGridLayoutManager = GridLayoutManager(activity, 2)
 
-        mMovieAdapter = MovieAdapter(mMovieList, mViewType, this, false)
+        mMovieAdapter = MovieAdapter(mMovieList, mViewType, this, false, isAdmin)
         if (mViewType == MovieAdapter.TYPE_GRID) {
             mMovieRecyclerView.layoutManager = mGridLayoutManager
         } else {
@@ -279,7 +363,11 @@ class MovieFragment(
                 super.onScrolled(recyclerView, dx, dy)
                 if (isLastItemDisplaying(recyclerView)) {
                     mHandler.postDelayed({
-                        getMovieListFromApi(isRefresh = false, isLoadMore = true, query = searchQuery)
+                        getMovieListFromApi(
+                            isRefresh = false,
+                            isLoadMore = true,
+                            query = searchQuery
+                        )
                     }, 1000)
                 }
             }
@@ -298,6 +386,7 @@ class MovieFragment(
         return false
     }
 
+    //Display movies according to the setting of the user.
     private fun loadDataBySetting() {
         mCategoryPref =
             mSharedPreferences.getString(Constant.PREF_CATEGORY_KEY, "popular").toString()
@@ -346,11 +435,28 @@ class MovieFragment(
                 if (!isLoadMore) {
                     mMovieList.clear()
                 }
-                mMovieList.addAll(movieResultList)
+//                if(isAdmin == "1") {
+////                    If the admin logged in, display all of the movies as usual
+                    mMovieList.addAll(movieResultList)
+//                } else {
+//                    val adminBlackList =
+//                        fStore.collection("Users").document(Constant.FIREBASE_ADMIN_ID)
+//                            .collection("Black List")
+//                    adminBlackList.get().addOnSuccessListener { querySnapshot ->
+//                        if (querySnapshot.isEmpty) {
+//                            mMovieList.addAll(movieResultList)
+//                        } else {
+//                            val blackListIds = querySnapshot.documents.mapNotNull { it.id.toInt() }
+//                            Log.d("Black list ids", blackListIds.toString())
+//                            movieResultList.removeAll { blackListIds.contains(it.id) }
+//                            mMovieList.addAll(movieResultList)
+//                        }
+//                    }
+//                }
                 mMovieAdapter.setupMovieFavorite(mMovieListDB)
 
                 //Ignore the setting when searching
-                if(query.isNullOrEmpty()) {
+                if (query.isNullOrEmpty()) {
                     mMovieAdapter.setupMovieBySetting(
                         mMovieList,
                         mRatePref,
@@ -392,6 +498,7 @@ class MovieFragment(
         })
     }
 
+
     fun updateMovies(query: String?) {
 //        getMovieListFromApi(isRefresh = true, isLoadMore = false, query = null)
         if (query.isNullOrEmpty()) {
@@ -409,5 +516,42 @@ class MovieFragment(
 //            Toast.makeText(context, "Looking for your movie...", Toast.LENGTH_SHORT).show()
 //            Log.d("MovieListAfterRemoving", filteredMovieList.toString())
         }
+    }
+
+    //Determine if the admin logged in, to change the icon of the favorite button
+    private fun fetchAdminStatus() {
+        val userId = user?.uid ?: return
+        val userDocRef = fStore.collection("Users").document(userId)
+        userDocRef.get()
+            .addOnSuccessListener { document ->
+                if (document != null && document.exists()) {
+                    val isAdminStatus = document.getString("isAdmin")!!
+                    isAdmin = isAdminStatus
+                }
+                onFetchAdminStatusComplete()
+            }
+            .addOnFailureListener { e ->
+                Log.w("Firestore", "Error getting document", e)
+                onFetchAdminStatusComplete()
+            }
+    }
+
+
+    //Display the movies based on the user or the admin (the favorite button)
+    private fun onFetchAdminStatusComplete() {
+        Log.d("isAdmin", isAdmin)
+        loadDataBySetting()
+        updateMovieList()
+        mHandler.postDelayed({
+            getMovieListFromApi(isRefresh = false, isLoadMore = false, query = null)
+        }, 1000)
+
+        mSwipeRefreshLayout.setOnRefreshListener {
+            mHandler.postDelayed({
+                updateMovieList()
+                getMovieListFromApi(isRefresh = true, isLoadMore = false, query = null)
+            }, 1000)
+        }
+        onLoadMoreListener()
     }
 }

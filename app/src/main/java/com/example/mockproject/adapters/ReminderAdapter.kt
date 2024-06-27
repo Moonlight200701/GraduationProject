@@ -61,6 +61,7 @@ class ReminderAdapter(
         private var title: TextView = itemView.findViewById(R.id.item_reminder_title_text)
         private var releaseDate: TextView = itemView.findViewById(R.id.item_reminder_release_text)
         private var reminderTime: TextView = itemView.findViewById(R.id.item_reminder_time_text)
+        private var reminderLocation: TextView = itemView.findViewById(R.id.item_reminder_location)
 
         fun bindData(position: Int, movie: Movie) {
             if (reminderType == REMINDER_PROFILE) {
@@ -79,6 +80,7 @@ class ReminderAdapter(
             title.text = movie.title
             "Release date: ${movie.releaseDate}".also { releaseDate.text = it }
             "Reminder time: ${movie.reminderTimeDisplay}".also { reminderTime.text = it }
+            "Location: ${movie.location}".also { reminderLocation.text = it }
         }
     }
 

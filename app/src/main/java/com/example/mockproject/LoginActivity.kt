@@ -122,7 +122,7 @@ class LoginActivity : AppCompatActivity() {
                                                 //Sync the data from the fireStore
                                                 lifecycleScope.launch {
                                                     val result =
-                                                        mDatabaseOpenHelper.synchronizeWithFireStore()
+                                                        mDatabaseOpenHelper.synchronizeWithFireStore(this@LoginActivity)
                                                     Log.d(
                                                         "Is Sync complete? 1 for yes, 0 for no",
                                                         result.toString()

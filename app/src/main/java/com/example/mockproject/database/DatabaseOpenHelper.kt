@@ -8,6 +8,7 @@ import android.database.sqlite.SQLiteException
 import android.database.sqlite.SQLiteOpenHelper
 import android.util.Log
 import com.example.mockproject.model.Movie
+import com.example.mockproject.util.NotificationUtil
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
@@ -34,6 +35,7 @@ class DatabaseOpenHelper(
         private var REMINDER_TIME = "movie_reminder_time"
         private var REMINDER_TIME_DISPLAY = "movie_reminder_time_display"
         private var USER_ID = "user_id"
+        private var MOVIE_LOCATION = "location"
 
         private var GENRE_TABLE = "genre_table"
         private var GENRE_ID = "genre_id"
@@ -41,6 +43,7 @@ class DatabaseOpenHelper(
         //Firebase
         private var FIREBASE_USERS_COLLECTION_NAME = "Users"
         private var FIREBASE_MOVIE_COLLECTION_NAME = "Favorites"
+        private var FIREBASE_REMINDER_COLLECTION_NAME = "Reminder"
         private var FIREBASE_MOVIE_ID = "id"
         private var FIREBASE_MOVIE_TITLE = "title"
         private var FIREBASE_MOVIE_POSTER_PATH = "poster path"
@@ -50,6 +53,9 @@ class DatabaseOpenHelper(
         private var FIREBASE_MOVIE_GENRE_IDS = "genre ids"
         private var FIREBASE_MOVIE_ADULTS = "adult"
         private var FIREBASE_MOVIE_IS_FAVORITE = "isFavorite"
+        private var FIREBASE_REMINDER_TIME = "reminder time"
+        private var FIREBASE_REMINDER_TIME_DISPLAY = "reminder time display"
+        private var FIREBASE_REMINDER_LOCATION = "location"
 
     }
 
@@ -81,6 +87,7 @@ class DatabaseOpenHelper(
                 "$REMINDER_TIME TEXT," +
                 "$REMINDER_TIME_DISPLAY TEXT," +
                 "$USER_ID TEXT, " +
+                "$MOVIE_LOCATION TEXT," +
                 "PRIMARY KEY($MOVIE_ID, $USER_ID))"
 
         //SQL statement to create a genres table
@@ -192,7 +199,7 @@ class DatabaseOpenHelper(
     }
 
 
-    fun addReminder(movie: Movie, userId: String): Int {
+    fun addReminder(movie: Movie, userId: String, location: String): Int {
         val db = this.writableDatabase
         val contentValues = ContentValues()
         contentValues.put(MOVIE_ID, movie.id)
@@ -202,6 +209,7 @@ class DatabaseOpenHelper(
         contentValues.put(MOVIE_DATE, movie.releaseDate)
         contentValues.put(MOVIE_IMAGE_POSTER, movie.posterPath)
         contentValues.put(USER_ID, userId)
+        contentValues.put(MOVIE_LOCATION, location)
         if (movie.adult) {
             contentValues.put(MOVIE_ADULT, 0)
         } else {
@@ -233,16 +241,17 @@ class DatabaseOpenHelper(
         return recordCount
     }
 
-    fun updateReminder(movie: Movie, userId: String): Int {
+    fun updateReminder(movie: Movie, userId: String, location: String): Int {
         val db = this.writableDatabase
         val contentValues = ContentValues()
         contentValues.put(REMINDER_TIME, movie.reminderTime)
         contentValues.put(REMINDER_TIME_DISPLAY, movie.reminderTimeDisplay)
+        contentValues.put(MOVIE_LOCATION, location)
         val recordCount =
             db.update(
                 REMINDER_TABLE,
                 contentValues,
-                "$MOVIE_ID = ? AND $USER_ID = ?",
+                "$MOVIE_ID = ? AND $USER_ID = ? ",
                 arrayOf(movie.id.toString(), userId)
             )
         db.close()
@@ -299,7 +308,8 @@ class DatabaseOpenHelper(
                     isFavorite = cursor.getInt(7) == 0,
                     reminderTime = cursor.getString(8),
                     reminderTimeDisplay = cursor.getString(9),
-                    userId = cursor.getString(10)
+                    userId = cursor.getString(10),
+                    location = cursor.getString(11)
                 )
                 listMovie.add(movie)
             } while (cursor.moveToNext())
@@ -335,7 +345,8 @@ class DatabaseOpenHelper(
                     cursor.getInt(7) == 0,
                     cursor.getString(8),
                     cursor.getString(9),
-                    userId = cursor.getString(10)
+                    userId = cursor.getString(10),
+                    location = cursor.getString(11)
                 )
                 movieReminderList.add(movie)
             } while (cursor.moveToNext())
@@ -360,17 +371,23 @@ class DatabaseOpenHelper(
     }
 
     //Synchronize the firestore with the local database
-    suspend fun synchronizeWithFireStore(): Int {
+    suspend fun synchronizeWithFireStore(context: Context): Int {
         var recordCount1: Long = 0
+        var recordCount2: Long = 0
         val db = this.writableDatabase
         val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
         val fireStore = FirebaseFirestore.getInstance()
-        val documents = fireStore.collection(FIREBASE_USERS_COLLECTION_NAME)
+        val favDocuments = fireStore.collection(FIREBASE_USERS_COLLECTION_NAME)
             .document(userId)
             .collection(FIREBASE_MOVIE_COLLECTION_NAME)
             .get()
             .await()
-        if (documents.isEmpty) {
+        val reminderDocuments = fireStore.collection(FIREBASE_USERS_COLLECTION_NAME)
+            .document(userId)
+            .collection(FIREBASE_REMINDER_COLLECTION_NAME)
+            .get()
+            .await()
+        if (favDocuments.isEmpty) {
             Log.d("Case New Account/Account delete all the favorites", "No documents for this one")
             return 0
         } else {
@@ -381,42 +398,90 @@ class DatabaseOpenHelper(
                     "$MOVIE_ID IN (SELECT $MOVIE_ID FROM $MOVIE_TABLE WHERE $USER_ID = ?)",
                     arrayOf(userId)
                 )
+                db.delete(REMINDER_TABLE, "$USER_ID = ?", arrayOf(userId))
 
-                for (document in documents) {
-                    //Delete the existing data in the local database
-                    val movie = document.data
-                    val contentValues = ContentValues().apply {
-                        put(MOVIE_ID, (movie[FIREBASE_MOVIE_ID] as Long).toInt())
-                        put(MOVIE_TITLE, movie[FIREBASE_MOVIE_TITLE] as String)
-                        put(MOVIE_OVERVIEW, movie[FIREBASE_MOVIE_OVERVIEW] as String)
-                        put(MOVIE_RATING, movie[FIREBASE_MOVIE_VOTE_AVERAGE] as Double)
-                        put(MOVIE_DATE, movie[FIREBASE_MOVIE_RELEASE_DATE] as String)
-                        put(MOVIE_IMAGE_POSTER, movie[FIREBASE_MOVIE_POSTER_PATH] as String)
-                        put(
-                            MOVIE_ADULT,
-                            if (movie[FIREBASE_MOVIE_ADULTS] as Boolean) 0 else 1
-                        )
-                        put(
-                            MOVIE_FAVORITE,
-                            if (movie[FIREBASE_MOVIE_IS_FAVORITE] as Boolean) 0 else 1
-                        )
-                        put(USER_ID, userId)
-                    }
-                    recordCount1 = db.insert(MOVIE_TABLE, null, contentValues)
-
-                    val genreIds = movie[FIREBASE_MOVIE_GENRE_IDS] as List<*>
-                    for (genreId in genreIds) {
-                        val genreValues = ContentValues().apply {
+                if (!favDocuments.isEmpty) {
+                    for (document in favDocuments) {
+                        //Delete the existing data in the local database
+                        val movie = document.data
+                        val contentValues = ContentValues().apply {
                             put(MOVIE_ID, (movie[FIREBASE_MOVIE_ID] as Long).toInt())
-                            put(GENRE_ID, genreId as String)
+                            put(MOVIE_TITLE, movie[FIREBASE_MOVIE_TITLE] as String)
+                            put(MOVIE_OVERVIEW, movie[FIREBASE_MOVIE_OVERVIEW] as String)
+                            put(MOVIE_RATING, movie[FIREBASE_MOVIE_VOTE_AVERAGE] as Double)
+                            put(MOVIE_DATE, movie[FIREBASE_MOVIE_RELEASE_DATE] as String)
+                            put(MOVIE_IMAGE_POSTER, movie[FIREBASE_MOVIE_POSTER_PATH] as String)
+                            put(
+                                MOVIE_ADULT,
+                                if (movie[FIREBASE_MOVIE_ADULTS] as Boolean) 0 else 1
+                            )
+                            put(
+                                MOVIE_FAVORITE,
+                                if (movie[FIREBASE_MOVIE_IS_FAVORITE] as Boolean) 0 else 1
+                            )
+                            put(USER_ID, userId)
                         }
-                        db.insert(GENRE_TABLE, null, genreValues)
+                        recordCount1 = db.insert(MOVIE_TABLE, null, contentValues)
+
+                        val genreIds = movie[FIREBASE_MOVIE_GENRE_IDS] as List<*>
+                        for (genreId in genreIds) {
+                            val genreValues = ContentValues().apply {
+                                put(MOVIE_ID, (movie[FIREBASE_MOVIE_ID] as Long).toInt())
+                                put(GENRE_ID, genreId as String)
+                            }
+                            db.insert(GENRE_TABLE, null, genreValues)
+                        }
+                    }
+                }
+
+                if (!reminderDocuments.isEmpty) {
+                    for (document in reminderDocuments) {
+                        val reminder = document.data
+                        val contentValues = ContentValues().apply {
+                            put(MOVIE_ID, (reminder[FIREBASE_MOVIE_ID] as Long).toInt())
+                            put(MOVIE_TITLE, reminder[FIREBASE_MOVIE_TITLE] as String)
+                            put(MOVIE_OVERVIEW, reminder[FIREBASE_MOVIE_OVERVIEW] as String)
+                            put(MOVIE_RATING, reminder[FIREBASE_MOVIE_VOTE_AVERAGE] as Double)
+                            put(MOVIE_DATE, reminder[FIREBASE_MOVIE_RELEASE_DATE] as String)
+                            put(MOVIE_IMAGE_POSTER, reminder[FIREBASE_MOVIE_POSTER_PATH] as String)
+                            put(
+                                MOVIE_ADULT,
+                                if (reminder[FIREBASE_MOVIE_ADULTS] as Boolean) 0 else 1
+                            )
+                            put(
+                                MOVIE_FAVORITE,
+                                if (reminder[FIREBASE_MOVIE_IS_FAVORITE] as Boolean) 0 else 1
+                            )
+                            put(USER_ID, userId)
+                            put(REMINDER_TIME, reminder[FIREBASE_REMINDER_TIME] as String)
+                            put(REMINDER_TIME_DISPLAY, reminder[FIREBASE_REMINDER_TIME_DISPLAY] as String)
+                            put(MOVIE_LOCATION, reminder[FIREBASE_REMINDER_LOCATION] as String)
+                        }
+                        recordCount2 = db.insert(REMINDER_TABLE, null, contentValues)
+                        Log.d("recordCount2", recordCount2.toString())
+
+                        val movie = Movie(
+                            id = (reminder[FIREBASE_MOVIE_ID] as Long).toInt(),
+                            title = reminder[FIREBASE_MOVIE_TITLE] as String,
+                            releaseDate = reminder[FIREBASE_MOVIE_RELEASE_DATE] as String,
+                            voteAverage = reminder[FIREBASE_MOVIE_VOTE_AVERAGE] as Double,
+                            overview = reminder[FIREBASE_MOVIE_OVERVIEW] as String,
+                            posterPath = reminder[FIREBASE_MOVIE_POSTER_PATH] as String,
+                            adult = reminder[FIREBASE_MOVIE_ADULTS] as Boolean,
+                            isFavorite = reminder[FIREBASE_MOVIE_IS_FAVORITE] as Boolean,
+                            genreIds = (reminder[FIREBASE_MOVIE_GENRE_IDS] as List<*>).filterIsInstance<String>()
+                        )
+                        val reminderTime = reminder[FIREBASE_REMINDER_TIME] as Long
+                        val location = reminder[FIREBASE_REMINDER_LOCATION] as String
+                        NotificationUtil().createNotification(movie, reminderTime, context, location)
+//                        createNotification(movie, reminderTime, context, location)
+
                     }
                 }
             } catch (e: Exception) {
                 Log.e("Sync", "Error during database transaction", e)
             }
-            return recordCount1.toInt()
+            return recordCount2.toInt()
         }
     }
 }

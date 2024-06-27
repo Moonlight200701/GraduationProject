@@ -13,10 +13,6 @@ class Constant {
         const val PROFILE_BIRTHDAY_KEY = "PROFILE_BIRTHDAY_KEY"
         const val PROFILE_GENDER_KEY = "PROFILE_GENDER_KEY"
 
-        const val PROFILE_AVATAR_DEFAULT = "PROFILE_AVATAR_KEY"
-        const val PROFILE_NAME_DEFAULT = "Admin"
-        const val PROFILE_EMAIL_DEFAULT = "admin@gmail.com.vn"
-        const val PROFILE_BIRTHDAY_DEFAULT = "2022/01/01"
         const val GENDER_MALE = "Male"
         const val GENDER_FEMALE = "Female"
 
@@ -43,5 +39,10 @@ class Constant {
 
         //Log Tag
         const val FIREBASE_ADD_TAG = "firebase_add"
+
+        //Admin id
+        const val FIREBASE_ADMIN_ID = "3Nm1Tiz4zUOq2tsx7494RsD3UzB2"
+
+        const val PREVIOUS_FRAGMENT_KEY = "PREVIOUS_FRAGMENT"
     }
 }

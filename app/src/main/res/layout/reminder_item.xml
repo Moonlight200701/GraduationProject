@@ -43,5 +43,12 @@
             android:layout_height="wrap_content"
             android:text="Reminder time: 20/08/2022-10:00"
             android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/item_reminder_location"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Location: CGV Minh Khai"
+            android:textSize="12sp" />
     </LinearLayout>
 </LinearLayout>

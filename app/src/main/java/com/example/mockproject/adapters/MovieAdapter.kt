@@ -1,6 +1,5 @@
 package com.example.mockproject.adapters
 
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -18,12 +17,13 @@ class MovieAdapter(
     private var mViewType: Int,
     private var mViewClickListener: View.OnClickListener,
     private var mIsFavouriteList: Boolean,
+    private var isAdmin: String
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     companion object {
         const val TYPE_LIST = 0
         const val TYPE_GRID = 1
-        const val TYPE_LOADING_LIST = 3
-        const val TYPE_LOADING_GRID = 4
+        const val TYPE_LOADING_LIST = 2
+        const val TYPE_LOADING_GRID = 3
     }
 
     fun setViewType(viewType: Int) {
@@ -80,6 +80,7 @@ class MovieAdapter(
     }
 
     override fun getItemViewType(position: Int): Int {
+        // Suggest that if that is the last item of the recycler view, if it is, the next item is a loading item
         return if (!mIsFavouriteList && mMovieList.isNotEmpty() && position == mMovieList.size - 1) {
             if (mViewType == TYPE_LIST) {
                 TYPE_LOADING_LIST
@@ -95,11 +96,12 @@ class MovieAdapter(
         return when (viewType) {
             TYPE_LIST -> {
                 ListViewHolder(
-                    mViewClickListener, mMovieList,
+                    mViewClickListener, mMovieList, isAdmin,
                     LayoutInflater.from(parent.context)
                         .inflate(R.layout.movie_item_list, parent, false)
                 )
             }
+
             TYPE_GRID -> {
                 GridViewHolder(
                     mMovieList,
@@ -107,12 +109,14 @@ class MovieAdapter(
                         .inflate(R.layout.movie_item_grid, parent, false)
                 )
             }
+
             TYPE_LOADING_LIST -> {
                 LoadListViewHolder(
                     LayoutInflater.from(parent.context)
                         .inflate(R.layout.movie_item_load_list, parent, false)
                 )
             }
+
             else -> LoadGridViewHolder(
                 LayoutInflater.from(parent.context)
                     .inflate(R.layout.movie_item_load_grid, parent, false)
@@ -133,6 +137,7 @@ class MovieAdapter(
     class ListViewHolder(
         private var mViewClickListener: View.OnClickListener,
         private var movieList: MutableList<Movie>,
+        private var isAdmin: String,
         itemView: View
     ) :
         RecyclerView.ViewHolder(itemView) {
@@ -159,15 +164,20 @@ class MovieAdapter(
                 adultImage.visibility = View.GONE
             }
             overviewText.text = movie.overview
-            if (movie.isFavorite) {
-                favouriteImgBtn.setImageResource(R.drawable.ic_star_black_24)
+            if (isAdmin == "1") {
+                favouriteImgBtn.setImageResource(R.drawable.ic_close_24)
             } else {
-                favouriteImgBtn.setImageResource(R.drawable.ic_star_outline_24)
+                if (movie.isFavorite) {
+                    favouriteImgBtn.setImageResource(R.drawable.ic_star_black_24)
+                } else {
+                    favouriteImgBtn.setImageResource(R.drawable.ic_star_outline_24)
+                }
             }
             favouriteImgBtn.tag = position
             favouriteImgBtn.setOnClickListener(mViewClickListener)
         }
     }
+
 
     class GridViewHolder(private var movieList: MutableList<Movie>, itemView: View) :
         RecyclerView.ViewHolder(itemView) {

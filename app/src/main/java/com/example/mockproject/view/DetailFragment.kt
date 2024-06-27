@@ -90,6 +90,8 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
     private val fStore = FirebaseFirestore.getInstance()
     private val df = fStore.collection("Users").document(user!!.uid).collection("Reminder")
 
+    private var previousFragmentName: String? = null
+
     fun setToolbarTitleListener(toolbarTitleListener: ToolbarTitleListener) {
         this.mToolbarTitleListener = toolbarTitleListener
     }
@@ -118,6 +120,7 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
         }
         if (bundle != null) {
             mMovie = bundle.getSerializable(Constant.MOVIE_KEY) as Movie
+            previousFragmentName = bundle.getSerializable(Constant.PREVIOUS_FRAGMENT_KEY) as String
             val movieReminderList = mDatabaseOpenHelper.getReminderByMovieId(mMovie.id, userId)
             if (movieReminderList.isEmpty()) {
                 mReminderExisted = false
@@ -189,6 +192,9 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        previousFragmentName = arguments?.getString("PREVIOUS_FRAGMENT")
+        Log.d("Previous Fragment", previousFragmentName.toString())
+
         CoroutineScope(Dispatchers.IO).launch {
             getTrailerVideoFromApi()
 
@@ -207,7 +213,7 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
     }
 
     override fun onDetach() {
-        mToolbarTitleListener.onUpdateToolbarTitle("Movie")
+        mToolbarTitleListener.onUpdateToolbarTitle(previousFragmentName?: "Movie")
         super.onDetach()
     }
 
@@ -356,6 +362,11 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
                 currentDateTime.set(year, month, day, hour, minute)
                 val reminderTimeInMillis = currentDateTime.timeInMillis
                 mMovie.reminderTime = reminderTimeInMillis.toString()
+                val currentTimeMillis = Calendar.getInstance().timeInMillis
+                if (reminderTimeInMillis < currentTimeMillis) {
+                    Toast.makeText(context, "Please select a future date and time", Toast.LENGTH_SHORT).show()
+                    return@TimePickerDialog
+                }
 
                 val monthDisplay = month + 1
                 val reminderTimeDisplay = "$year/$monthDisplay/$day-$hour:$minute"
@@ -374,7 +385,7 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
 
                     if (reminderEt.text.trim().isNotEmpty()) {
                         if (mReminderExisted) {
-                            if (mDatabaseOpenHelper.updateReminder(mMovie, userId) > 0) {
+                            if (mDatabaseOpenHelper.updateReminder(mMovie, userId, reminderEt.text.toString()) > 0) {
                                 //Adding to the fireStore
                                 val reminderItem = hashMapOf(
                                     "id" to mMovie.id,
@@ -384,8 +395,10 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
                                     "vote average" to mMovie.voteAverage,
                                     "release date" to mMovie.releaseDate,
                                     "genre ids" to mMovie.genreIds,
-                                    "adult" to mMovie.adult,
-                                    "reminder time" to mMovie.reminderTimeDisplay
+                                    "reminder time" to mMovie.reminderTime,
+                                    "reminder time display" to mMovie.reminderTimeDisplay,
+                                    "isFavorite" to mMovie.isFavorite,
+                                    "location" to reminderEt.text.toString()
                                 )
                                 df.document(mMovie.id.toString()).update(reminderItem)
                                     .addOnSuccessListener {
@@ -405,10 +418,9 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
                                     .show()
                             }
                         } else {
-                            if (mDatabaseOpenHelper.addReminder(mMovie, userId) > 0) {
+                            if (mDatabaseOpenHelper.addReminder(mMovie, userId, reminderEt.text.toString()) > 0) {
                                 mReminderExisted = true
                                 mReminderListener.onLoadReminder()
-
                                 val reminderItem = hashMapOf(
                                     "id" to mMovie.id,
                                     "title" to mMovie.title,
@@ -418,11 +430,14 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
                                     "release date" to mMovie.releaseDate,
                                     "genre ids" to mMovie.genreIds,
                                     "adult" to mMovie.adult,
-                                    "reminder time" to mMovie.reminderTimeDisplay
+                                    "reminder time" to mMovie.reminderTime,
+                                    "reminder time display" to mMovie.reminderTimeDisplay,
+                                    "isFavorite" to mMovie.isFavorite,
+                                    "location" to reminderEt.text.toString()
                                 )
                                 df.document(mMovie.id.toString()).set(reminderItem)
                                     .addOnSuccessListener {
-
+                                        Log.d("Reminder add", "Add a reminder successfully")
                                     }
                                 NotificationUtil().createNotification(
                                     mMovie,

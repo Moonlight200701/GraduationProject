@@ -42,6 +42,7 @@ import java.io.File
 import java.io.FileWriter
 import java.io.IOException
 import java.util.concurrent.CountDownLatch
+import kotlin.math.abs
 
 //This fragment is for recommending movies
 class AboutFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragment(),
@@ -311,6 +312,7 @@ class AboutFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
                 val movieItem = orderedMovieList[position]
                 val bundle = Bundle()
                 bundle.putSerializable(Constant.MOVIE_KEY, movieItem)
+                bundle.putSerializable(Constant.PREVIOUS_FRAGMENT_KEY, "Suggestanl")
                 val detailFragment = DetailFragment(mDatabaseOpenHelper)
                 detailFragment.setToolbarTitleListener(mToolbarTitleListener)
                 detailFragment.setBadgeListener(mBadgeListener)
@@ -318,6 +320,7 @@ class AboutFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
                 detailFragment.setRemindListener(mReminderListener)
                 detailFragment.arguments = bundle
                 requireActivity().supportFragmentManager.beginTransaction().apply {
+                    setCustomAnimations(R.anim.nav_default_enter_anim,R.anim.nav_default_exit_anim)
                     replace(
                         R.id.recommendation_fragment,
                         detailFragment,
@@ -339,13 +342,12 @@ class AboutFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
 
     private fun getSimilarMovies(movieToRecommendList: MutableMap<Int, MutableMap<String, Any>>, movieFavoriteList: MutableMap<Int, MutableMap<String, Any>>, numSimilarMovies: Int): List<Int> {
         val similarityScore = mutableMapOf<Int, Double>()
-        Log.d("Movie to recommend", movieToRecommendList.size.toString())
-        Log.d("Movie Favorite List", movieFavoriteList.size.toString())
-
         for ((movieId, movieData) in movieToRecommendList) {
             val genreIds = movieData[Constant.GENRE_ID_KEY] as List<*>
             val actors = movieData[Constant.ACTOR_KEY] as List<*>
+            val rating = movieData[Constant.VOTE_AVERAGE_KEY] as Double
 
+            //If there is the same movie in fav movie list as in the sample set, skip it
             if (movieId in movieFavoriteList) {
                 continue
             }
@@ -356,13 +358,15 @@ class AboutFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
             for ((_, favMovieData) in movieFavoriteList) {
                 val favGenreIds = favMovieData[Constant.GENRE_ID_KEY] as List<*>
                 val favActors = favMovieData[Constant.ACTOR_KEY] as List<*>
+                val favRating = favMovieData[Constant.VOTE_AVERAGE_KEY] as Double
 
                 //Calculating Jaccard Similarity:
                 val genreIdIntersect = genreIds.intersect(favGenreIds.toSet()).size.toDouble()
                 val genreIdUnion = genreIds.union(favGenreIds).size.toDouble()
                 val actorIntersect = actors.intersect(favActors.toSet()).size.toDouble()
                 val actorUnion = actors.union(favActors).size.toDouble()
-                val jaccardSimilarity = ((genreIdIntersect / genreIdUnion) + (actorIntersect / actorUnion)) / 2.0
+                val ratingSimilarity = 1 - abs(rating - favRating) / 10.0
+                val jaccardSimilarity = ((genreIdIntersect / genreIdUnion) + (actorIntersect / actorUnion)) + ratingSimilarity / 3.0
 
                 totalSimilarity += jaccardSimilarity
                 numSimilarities++
@@ -370,12 +374,11 @@ class AboutFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
 
             val averageSimilarity = if (numSimilarities > 0) totalSimilarity / numSimilarities else 0.0
             similarityScore[movieId] = averageSimilarity
+            Log.d("Similarity Scores", similarityScore.toString())
         }
 
         val sortedSimilarityScore = similarityScore.toList().sortedByDescending { (_, score) -> score }.toMap()
-        Log.d("Similarity score", sortedSimilarityScore.toString())
         val topSimilarMoviesIds = sortedSimilarityScore.keys.take(numSimilarMovies)
-        Log.d("Top similarMovie Ids", topSimilarMoviesIds.toString())
 
         getMoviesDetailOnId(topSimilarMoviesIds)
         return topSimilarMoviesIds
