@@ -393,6 +393,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
             R.id.change_view
             -> {
                 mIsGridView = !mIsGridView
+                //If the current View is a GridView, that means the icon of the menu of gonna be the ListView Icon.
                 if (mIsGridView) {
                     item.setIcon(R.drawable.ic_view_list_24)
                 } else {
@@ -439,15 +440,15 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         mFavoriteFragment.updateFavouriteList(movie, isFavourite)
     }
 
-    //For changing the icon when the movie get delete from the favorite list fragment, only update in the favorite is deleting 1 movie from the favorite list
+
     override fun onUpdateFromFavorite(movie: Movie) {
-        mMovieFragment.updateMovieList(movie, false) //Remove the movie from favorite in the Movie Fragmnet
-        val detailFragment = supportFragmentManager.findFragmentByTag(Constant.FRAGMENT_DETAIL_TAG)
-        Log.d("Detail Fragment", detailFragment.toString())
-        if (detailFragment != null && detailFragment.isAdded) {
-            detailFragment as DetailFragment
-            detailFragment.updateMovie(movie.id)
-        }
+        mMovieFragment.updateMovieList(movie, false) //Remove the movie from favorite in the Movie Fragment
+//        val detailFragment = supportFragmentManager.findFragmentByTag(Constant.FRAGMENT_DETAIL_TAG)
+//        Log.d("Detail Fragment", detailFragment.toString())
+//        if (detailFragment != null && detailFragment.isAdded) {
+//            detailFragment as DetailFragment
+//            detailFragment.updateMovie(movie.id)
+//        }
     }
 
 

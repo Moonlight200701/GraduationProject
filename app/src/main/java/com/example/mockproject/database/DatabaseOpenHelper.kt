@@ -372,7 +372,6 @@ class DatabaseOpenHelper(
 
     //Synchronize the firestore with the local database, context for the notification
     suspend fun synchronizeWithFireStore(context: Context): Int {
-
         var recordCount2: Long = 0
         val db = this.writableDatabase
         val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""

@@ -1,5 +1,6 @@
 package com.example.mockproject.adapters
 
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -54,9 +55,16 @@ class MovieAdapter(
             null
         }
 
+        for(movie in movieList){
+            Log.d("Release Date", "${movie.id} = ${movie.releaseDate}")
+        }
+
+        //Sometimes, each pages doesn't have movie with the suitable year set by the setting -> no film found
+
         if (convertYear != null) {
             movieList.removeAll {
-                it.releaseDate.substring(0, 4).trim() != releaseYear
+                if(it.releaseDate.length > 4) it.releaseDate.substring(0, 4).trim() != releaseYear else it.releaseDate != releaseYear
+
             }
         }
 

@@ -168,7 +168,6 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
 
         val layoutManager = LinearLayoutManager(context)
         layoutManager.orientation = LinearLayoutManager.HORIZONTAL
-
         mCastAndCrewList = arrayListOf()
         mCastAndCrewAdapter = CastAndCrewAdapter(mCastAndCrewList)
         mCastRecyclerView.layoutManager = layoutManager
@@ -183,8 +182,6 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
         mTrailerRecyclerView.layoutManager = layoutManager2
         mTrailerRecyclerView.setHasFixedSize(true)
         mTrailerRecyclerView.adapter = mTrailerAdapter
-
-
         setHasOptionsMenu(true)
         return view
     }
@@ -192,7 +189,7 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
     @SuppressLint("NotifyDataSetChanged")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        previousFragmentName = arguments?.getString("PREVIOUS_FRAGMENT")
+        previousFragmentName = arguments?.getString(Constant.PREVIOUS_FRAGMENT_KEY)
         Log.d("Previous Fragment", previousFragmentName.toString())
 
         CoroutineScope(Dispatchers.IO).launch {
