@@ -443,12 +443,13 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
 
     override fun onUpdateFromFavorite(movie: Movie) {
         mMovieFragment.updateMovieList(movie, false) //Remove the movie from favorite in the Movie Fragment
-//        val detailFragment = supportFragmentManager.findFragmentByTag(Constant.FRAGMENT_DETAIL_TAG)
-//        Log.d("Detail Fragment", detailFragment.toString())
-//        if (detailFragment != null && detailFragment.isAdded) {
-//            detailFragment as DetailFragment
-//            detailFragment.updateMovie(movie.id)
-//        }
+        val detailFragment = supportFragmentManager.findFragmentByTag(Constant.FRAGMENT_DETAIL_TAG)
+        Log.d("Detail Fragment", detailFragment.toString())
+        //thIS CODE UPDATE the detail fragment if it is added in the movieFragment
+        if (detailFragment != null && detailFragment.isAdded) {
+            detailFragment as DetailFragment
+            detailFragment.updateMovie(movie.id)
+        }
     }
 
 
