@@ -238,73 +238,73 @@ class MovieFragment(
     }
 
     private fun handleAdminButtonClick(position: Int) {
-        val movieItem: Movie = mMovieList[position]
-        val dialogBuilder2 = AlertDialog.Builder(context)
-        df.document(movieItem.id.toString()).get().addOnSuccessListener {
-            //If it exists that means the admin wants to delete it from the black list
-            if (it.exists()) {
-                dialogBuilder2.setCancelable(true)
-                dialogBuilder2.setTitle("Confirmation")
-                dialogBuilder2.setMessage("Are you sure you want to remove this movie from the black list?")
-                dialogBuilder2.setPositiveButton("Ok") { currentDialog, _ ->
-                    df.document(movieItem.id.toString()).delete().addOnSuccessListener {
-                        Toast.makeText(
-                            context,
-                            "Removed successfully, showing this to users :>",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                        currentDialog.dismiss()
-                    }.addOnFailureListener {
-                        Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
-                        currentDialog.dismiss()
-                    }
-                }
-                dialogBuilder2.setNegativeButton("Cancel") { currentDialog, _ ->
-                    currentDialog.dismiss()
-                }
-                val dialog = dialogBuilder2.create()
-                dialog.window?.attributes?.dimAmount =
-                    0.9f // Set this value between 0.0f and 1.0f to control the darkness
-                dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-                dialog.show()
-            } else {
-                //Not exist? that means the admin is adding it to the blacklist so no user can see it
-                val blacklistItem = hashMapOf(
-                    "id" to movieItem.id,
-                    "title" to movieItem.title,
-                    "poster_path" to movieItem.posterPath,
-                    "overview" to movieItem.overview,
-                    "vote_average" to movieItem.voteAverage,
-                    "release_date" to movieItem.releaseDate,
-                    "genre_ids" to movieItem.genreIds,
-                )
-                dialogBuilder2.setCancelable(true)
-                dialogBuilder2.setTitle("Confirmation")
-                dialogBuilder2.setMessage("Are you sure you want to add this movie to the black list?")
-                dialogBuilder2.setPositiveButton("Ok") { currentDialog, _ ->
-                    df.document(movieItem.id.toString()).set(blacklistItem).addOnSuccessListener {
-                        Toast.makeText(
-                            context,
-                            "Added to the black list successfully, not showing this to users :>",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                        currentDialog.dismiss()
-                    }.addOnFailureListener {
-                        Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
-                        currentDialog.dismiss()
-                    }
-                }
-                dialogBuilder2.setNegativeButton("Cancel") { currentDialog, _ ->
-                    currentDialog.dismiss()
-                }
-                val dialog = dialogBuilder2.create()
-                dialog.window?.attributes?.dimAmount =
-                    0.9f // Set this value between 0.0f and 1.0f to control the darkness
-                dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-                dialog.show()
-
-            }
-        }
+//        val movieItem: Movie = mMovieList[position]
+//        val dialogBuilder2 = AlertDialog.Builder(context)
+//        df.document(movieItem.id.toString()).get().addOnSuccessListener {
+//            //If it exists that means the admin wants to delete it from the black list
+//            if (it.exists()) {
+//                dialogBuilder2.setCancelable(true)
+//                dialogBuilder2.setTitle("Confirmation")
+//                dialogBuilder2.setMessage("Are you sure you want to remove this movie from the black list?")
+//                dialogBuilder2.setPositiveButton("Ok") { currentDialog, _ ->
+//                    df.document(movieItem.id.toString()).delete().addOnSuccessListener {
+//                        Toast.makeText(
+//                            context,
+//                            "Removed successfully, showing this to users :>",
+//                            Toast.LENGTH_SHORT
+//                        ).show()
+//                        currentDialog.dismiss()
+//                    }.addOnFailureListener {
+//                        Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
+//                        currentDialog.dismiss()
+//                    }
+//                }
+//                dialogBuilder2.setNegativeButton("Cancel") { currentDialog, _ ->
+//                    currentDialog.dismiss()
+//                }
+//                val dialog = dialogBuilder2.create()
+//                dialog.window?.attributes?.dimAmount =
+//                    0.9f // Set this value between 0.0f and 1.0f to control the darkness
+//                dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+//                dialog.show()
+//            } else {
+//                //Not exist? that means the admin is adding it to the blacklist so no user can see it
+//                val blacklistItem = hashMapOf(
+//                    "id" to movieItem.id,
+//                    "title" to movieItem.title,
+//                    "poster_path" to movieItem.posterPath,
+//                    "overview" to movieItem.overview,
+//                    "vote_average" to movieItem.voteAverage,
+//                    "release_date" to movieItem.releaseDate,
+//                    "genre_ids" to movieItem.genreIds,
+//                )
+//                dialogBuilder2.setCancelable(true)
+//                dialogBuilder2.setTitle("Confirmation")
+//                dialogBuilder2.setMessage("Are you sure you want to add this movie to the black list?")
+//                dialogBuilder2.setPositiveButton("Ok") { currentDialog, _ ->
+//                    df.document(movieItem.id.toString()).set(blacklistItem).addOnSuccessListener {
+//                        Toast.makeText(
+//                            context,
+//                            "Added to the black list successfully, not showing this to users :>",
+//                            Toast.LENGTH_SHORT
+//                        ).show()
+//                        currentDialog.dismiss()
+//                    }.addOnFailureListener {
+//                        Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
+//                        currentDialog.dismiss()
+//                    }
+//                }
+//                dialogBuilder2.setNegativeButton("Cancel") { currentDialog, _ ->
+//                    currentDialog.dismiss()
+//                }
+//                val dialog = dialogBuilder2.create()
+//                dialog.window?.attributes?.dimAmount =
+//                    0.9f // Set this value between 0.0f and 1.0f to control the darkness
+//                dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+//                dialog.show()
+//
+//            }
+//        }
 
     }
 
@@ -464,7 +464,7 @@ class MovieFragment(
                         mSortByPref
                     )
                 }
-                // Add load more item if necessary
+                // Add load more item if necessary(mostly the loading icon)
                 if (mCurrentPage < responseBody.totalPages) {
                     val loadMoreItem =
                         Movie(0, "0", "0", 0.0, "0", "0", false, listOf(), false, "0", "0")

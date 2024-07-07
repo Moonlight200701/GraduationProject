@@ -82,9 +82,10 @@ class LoginActivity : AppCompatActivity() {
                                         if (status.equals("Disabled", true)) {
                                             Toast.makeText(
                                                 this,
-                                                "Account is disabled. Please contact the admin",
+                                                "Account is disabled. Please contact the admin at danny@gmail.com",
                                                 Toast.LENGTH_SHORT
                                             ).show()
+                                            loginBtn.isEnabled = true
                                             fAuth.signOut()
                                         } else {
                                             //a little not necessary as i can call this from the main activity
@@ -107,7 +108,7 @@ class LoginActivity : AppCompatActivity() {
 
                                             //In case if the user changed the password through the forgot pass/ change pass
                                             //If password doesn't change, nothing happens
-                                            updatePassword(mPassword)
+//                                            updatePassword(mPassword)
 
                                             //No need to sync when the admin logs in
                                             if (document.getString("isAdmin") == "1") {
@@ -157,6 +158,7 @@ class LoginActivity : AppCompatActivity() {
                                         "Connection error. Please try again later.",
                                         Toast.LENGTH_SHORT
                                     ).show()
+                                    loginBtn.isEnabled = true
                                 }
 
                         } else {
@@ -165,6 +167,7 @@ class LoginActivity : AppCompatActivity() {
                                 "Email or password doesn't match ",
                                 Toast.LENGTH_SHORT
                             ).show()
+
                         }
                     }
             } else {
@@ -178,17 +181,17 @@ class LoginActivity : AppCompatActivity() {
     }
 
     //If the user changed the password or get to change the password by the forgot password, update the password in the firestore
-    private fun updatePassword(newPassword: String) {
-        val newPasswordData: HashMap<String, Any> = hashMapOf(
-            "Password" to newPassword
-        )
-        fStore.collection("Users").document(fAuth.currentUser!!.uid).update(newPasswordData)
-            .addOnCompleteListener {
-                if (it.isSuccessful) {
-                    Log.d("Update new Password", "Updated New Password successfully")
-                }
-            }
-    }
+//    private fun updatePassword(newPassword: String) {
+//        val newPasswordData: HashMap<String, Any> = hashMapOf(
+//            "Password" to newPassword
+//        )
+//        fStore.collection("Users").document(fAuth.currentUser!!.uid).update(newPasswordData)
+//            .addOnCompleteListener {
+//                if (it.isSuccessful) {
+//                    Log.d("Update new Password", "Updated New Password successfully")
+//                }
+//            }
+//    }
 
     private fun showForgotPasswordDialog() {
         val dialogBuilder = AlertDialog.Builder(this)

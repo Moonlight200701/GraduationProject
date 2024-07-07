@@ -192,6 +192,7 @@ class AdminFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
 
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     private fun handleTerminateButtonClick(view: View) {
 //        Toast.makeText(context, "Deleted :>", Toast.LENGTH_SHORT).show()
         val position = view.tag as Int

@@ -108,7 +108,6 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
         this.mReminderListener = reminderListener
     }
 
-    @RequiresApi(Build.VERSION_CODES.M)
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
@@ -120,6 +119,7 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
         }
         if (bundle != null) {
             mMovie = bundle.getSerializable(Constant.MOVIE_KEY) as Movie
+            //For setting the Toolbar if navigate back to the previous one
             previousFragmentName = bundle.getSerializable(Constant.PREVIOUS_FRAGMENT_KEY) as String
             val movieReminderList = mDatabaseOpenHelper.getReminderByMovieId(mMovie.id, userId)
             if (movieReminderList.isEmpty()) {
@@ -189,9 +189,9 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
         return view
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         previousFragmentName = arguments?.getString("PREVIOUS_FRAGMENT")
         Log.d("Previous Fragment", previousFragmentName.toString())
 
@@ -204,6 +204,7 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
             }
         }
     }
+
 
     override fun onPrepareOptionsMenu(menu: Menu) {
         val item = menu.findItem(R.id.change_view)
@@ -277,7 +278,7 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
         }
     }
 
-    fun updateMovie(movieId: Int) {
+    fun updateMovie(movieId: Int) { //Remove movie from favorite in the detail
         if (movieId == mMovie.id) {
             mMovie.isFavorite = false
             mFavouriteBtn.setImageResource(R.drawable.ic_star_outline_24)

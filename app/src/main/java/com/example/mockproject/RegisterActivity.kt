@@ -120,7 +120,7 @@ class RegisterActivity : AppCompatActivity() {
                     val userInfo: HashMap<String, Any> = HashMap()
                     userInfo["FullName"] = fullName.text.toString()
                     userInfo["Email"] = email
-                    userInfo["Password"] = password
+//                    userInfo["Password"] = password  this is for easy debugging only
                     userInfo["isAdmin"] = "0"
                     userInfo["Status"] = "Enabled"
                     userInfo["Birthday"] = "Unknown"

@@ -149,6 +149,7 @@ class EditProfileFragment : Fragment() {
         item.isVisible = false
     }
 
+    //Capture an avatar on camera
     private fun pickAvatar() {
         val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
         mCameraResultLauncher.launch(cameraIntent)

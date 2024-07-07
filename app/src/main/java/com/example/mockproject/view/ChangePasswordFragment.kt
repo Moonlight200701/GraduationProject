@@ -15,8 +15,6 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
 class ChangePasswordFragment : Fragment() {
-    //private lateinit var mToolbarTitleListener: ToolbarTitleListener
-
     //UI
     private lateinit var mOldPasswordET: EditText
     private lateinit var mNewPasswordET: EditText
@@ -26,9 +24,6 @@ class ChangePasswordFragment : Fragment() {
     private var user = FirebaseAuth.getInstance().currentUser
     private var fStore = FirebaseFirestore.getInstance().collection("Users").document(user!!.uid)
 
-//    fun setToolbarTitleListener(toolbarTitleListener: ToolbarTitleListener) {
-//        this.mToolbarTitleListener = toolbarTitleListener
-//    }
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -106,15 +101,15 @@ class ChangePasswordFragment : Fragment() {
         user!!.reauthenticate(authCredential).addOnSuccessListener {
             user!!.updatePassword(newPass).addOnSuccessListener {
                 //Store into the firestore for easier observing and fixing, but shouldn't store it here
-                val newPasswordData: Map<String, Any> = hashMapOf("Password" to newPass)
-                fStore.update(newPasswordData).addOnSuccessListener {
+//                val newPasswordData: Map<String, Any> = hashMapOf("Password" to newPass)
+//                fStore.update(newPasswordData).addOnSuccessListener {
                     Toast.makeText(context, "Update password successfully", Toast.LENGTH_SHORT)
                         .show()
                     requireActivity().supportFragmentManager.popBackStack()
-                }.addOnFailureListener {
-                    Toast.makeText(context, "Fail to update new password", Toast.LENGTH_SHORT)
-                        .show()
-                }
+//                }.addOnFailureListener {
+//                    Toast.makeText(context, "Fail to update new password", Toast.LENGTH_SHORT)
+//                        .show()
+//                }
             }.addOnFailureListener {
                 Toast.makeText(context, "Fail to update new password", Toast.LENGTH_SHORT).show()
             }

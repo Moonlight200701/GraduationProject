@@ -201,7 +201,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
         mAboutFragment.setBadgeListener(this)
         mAboutFragment.setToolbarTitleListener(this)
         mAboutFragment.setDetailListener(this)
-        mAboutFragment.setMovieListener(this)
+//        mAboutFragment.setMovieListener(this)
         mAboutFragment.setRemindListener(this)
 
         mReminderFragment = ReminderFragment(mDatabaseOpenHelper)
@@ -441,7 +441,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
 
     //For changing the icon when the movie get delete from the favorite list fragment, only update in the favorite is deleting 1 movie from the favorite list
     override fun onUpdateFromFavorite(movie: Movie) {
-        mMovieFragment.updateMovieList(movie, false)
+        mMovieFragment.updateMovieList(movie, false) //Remove the movie from favorite in the Movie Fragmnet
         val detailFragment = supportFragmentManager.findFragmentByTag(Constant.FRAGMENT_DETAIL_TAG)
         Log.d("Detail Fragment", detailFragment.toString())
         if (detailFragment != null && detailFragment.isAdded) {
@@ -468,7 +468,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
 
     override fun onReminderGoToMovieDetail(movie: Movie) {
         mViewPager.currentItem = 0
-        supportActionBar!!.title = movie.title
+        supportActionBar!!.title = movie.title //change the action bar according to the movies
 
         if (this.mDrawerLayout.isDrawerOpen(GravityCompat.START)) {
             this.mDrawerLayout.closeDrawer(GravityCompat.START)
@@ -561,11 +561,20 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
     }
 
     private fun setUpDrawerLayout() {
+        // Find the toolbar view in the layout and set its properties
         mToolbar = findViewById(R.id.toolbar)
         mToolbar.setTitleTextColor(Color.WHITE)
+
+        // Set the toolbar as the action bar for the activity
         setSupportActionBar(mToolbar)
+
+        // Set the title of the action bar to the first item in mTabTitleList
         supportActionBar!!.title = mTabTitleList[0]
+
+        // Find the DrawerLayout view in the layout
         mDrawerLayout = findViewById(R.id.drawer_layout)
+
+        // Create an ActionBarDrawerToggle, which ties together the drawer and the action bar
         toggle = ActionBarDrawerToggle(
             this,
             mDrawerLayout,
@@ -574,11 +583,18 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
             R.string.navigation_drawer_close
         )
 
+        // Add the toggle as a listener for drawer events
         mDrawerLayout.addDrawerListener(toggle)
+
+        // Sync the toggle state with the drawer's current state
         toggle.syncState()
+
+        // Set a click listener for the navigation icon in the toolbar
         toggle.toolbarNavigationClickListener = View.OnClickListener {
             mDrawerLayout.openDrawer(GravityCompat.START)
         }
+
+        // Enable the display of the "home" button in the action bar
         supportActionBar!!.setDisplayShowHomeEnabled(true)
     }
 

@@ -1,6 +1,8 @@
 package com.example.mockproject.view
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.Menu
@@ -74,6 +76,8 @@ class AboutFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
     private var fStore = FirebaseFirestore.getInstance().collection("Users").document(currentUserId)
     private var role: String = ""
 
+    private lateinit var mHandler: Handler
+
     //Purpose of the listeners: Update
     fun setToolbarTitleListener(toolbarTitleListener: ToolbarTitleListener) {
         this.mToolbarTitleListener = toolbarTitleListener
@@ -125,6 +129,7 @@ class AboutFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
         )
 
         mLoadingIcon = view.findViewById(R.id.recommendation_loading)
+        mHandler = Handler(Looper.getMainLooper())
 
         //Get the dataSet
         getSomeMovieForRecommendation()
@@ -312,7 +317,7 @@ class AboutFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
                 val movieItem = orderedMovieList[position]
                 val bundle = Bundle()
                 bundle.putSerializable(Constant.MOVIE_KEY, movieItem)
-                bundle.putSerializable(Constant.PREVIOUS_FRAGMENT_KEY, "Suggestanl")
+                bundle.putSerializable(Constant.PREVIOUS_FRAGMENT_KEY, "Suggest")
                 val detailFragment = DetailFragment(mDatabaseOpenHelper)
                 detailFragment.setToolbarTitleListener(mToolbarTitleListener)
                 detailFragment.setBadgeListener(mBadgeListener)
@@ -400,12 +405,18 @@ class AboutFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
             // If the user is an admin, directly load all movies from mMovieListFromApi
             orderedMovieList.addAll(mMovieListFromApi)
             loadMovieRecommendationList(orderedMovieList)
+            mLoadingIcon.visibility = View.GONE
         } else {
             // If the user is not an admin, proceed with the similarity calculation
             if (movieList.isNotEmpty() && movieFavoriteList.isNotEmpty()) {
                 mLoadingIcon.visibility = View.VISIBLE
+                mRecommendationList.visibility = View.INVISIBLE
                 // Perform similarity calculation
-                getSimilarMovies(movieList, movieFavoriteList, 5)
+                mHandler.postDelayed({
+                    getSimilarMovies(movieList, movieFavoriteList, 5)
+                },3000)
+
+
             } else {
                 // Log a message or handle the case where data is not fully loaded
                 Log.d("AboutFragment", "Movie data is not fully loaded yet")
@@ -425,6 +436,7 @@ class AboutFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
             Log.d("movie From api after sorting", orderedMovieList.toString())
         }
         mLoadingIcon.visibility = View.GONE
+        mRecommendationList.visibility = View.VISIBLE
     }
 
 

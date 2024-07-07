@@ -370,9 +370,9 @@ class DatabaseOpenHelper(
         return recordCount
     }
 
-    //Synchronize the firestore with the local database
+    //Synchronize the firestore with the local database, context for the notification
     suspend fun synchronizeWithFireStore(context: Context): Int {
-        var recordCount1: Long = 0
+
         var recordCount2: Long = 0
         val db = this.writableDatabase
         val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
@@ -421,7 +421,7 @@ class DatabaseOpenHelper(
                             )
                             put(USER_ID, userId)
                         }
-                        recordCount1 = db.insert(MOVIE_TABLE, null, contentValues)
+                        recordCount2 = db.insert(MOVIE_TABLE, null, contentValues)
 
                         val genreIds = movie[FIREBASE_MOVIE_GENRE_IDS] as List<*>
                         for (genreId in genreIds) {
