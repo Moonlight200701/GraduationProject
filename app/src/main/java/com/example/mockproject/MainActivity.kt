@@ -73,7 +73,7 @@ import org.greenrobot.eventbus.ThreadMode
 class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, FavouriteListener,
     MovieListener, SettingListener, DetailListener, ProfileListener, ReminderListener,
     FavoriteToRecommendListener {
-    private var mPermissionList = arrayOf(Manifest.permission.CAMERA)
+    private var mPermissionList = arrayOf(Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE)
     private var mIsGridView: Boolean = false
     private lateinit var mViewPager: ViewPager
     private lateinit var mTabLayout: TabLayout
@@ -124,6 +124,7 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
     private val mDocRef = fStore.collection("Users").document(mUser!!.uid)
 
     private var backPressedCount = 0
+
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -322,9 +323,10 @@ class MainActivity : AppCompatActivity(), ToolbarTitleListener, BadgeListener, F
             mTabTitleRevert = supportActionBar!!.title.toString()
         }
 
-        if (checkPermissionDenied(Manifest.permission.CAMERA)) {
+        if (checkPermissionDenied(Manifest.permission.CAMERA) && checkPermissionDenied(Manifest.permission.READ_EXTERNAL_STORAGE)) {
             requestPermissions(mPermissionList, 0)
         }
+
         createNotificationChannel()
 
     }

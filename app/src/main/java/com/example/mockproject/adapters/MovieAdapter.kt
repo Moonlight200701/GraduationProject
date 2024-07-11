@@ -203,8 +203,5 @@ class MovieAdapter(
     class LoadListViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
     class LoadGridViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
 
-    //Animation
-    override fun onViewDetachedFromWindow(holder: RecyclerView.ViewHolder) {
-        super.onViewDetachedFromWindow(holder)
-    }
+
 }

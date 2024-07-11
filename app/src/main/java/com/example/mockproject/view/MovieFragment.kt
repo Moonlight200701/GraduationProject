@@ -1,7 +1,6 @@
 package com.example.mockproject.view
 
 import android.annotation.SuppressLint
-import android.app.AlertDialog
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.os.Handler
@@ -10,7 +9,6 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.WindowManager
 import android.widget.RelativeLayout
 import android.widget.Toast
 import androidx.fragment.app.Fragment
@@ -140,8 +138,7 @@ class MovieFragment(
                     Log.d("isAdmin", isAdmin + "onClick")
                     //To change the favorite button's click event if the admin logged in
                     if (isAdmin == "1") {
-                        Toast.makeText(context, "You clicked me", Toast.LENGTH_SHORT).show()
-                        handleAdminButtonClick(position)
+                        Toast.makeText(context, "Not yet implemented", Toast.LENGTH_SHORT).show()
                     } else {
                         //Handle the favorite button as usual
                         val favoritesRef =
@@ -223,7 +220,7 @@ class MovieFragment(
                 detailFragment.setRemindListener(mReminderListener)
                 detailFragment.arguments = bundle
                 requireActivity().supportFragmentManager.beginTransaction().apply {
-                    setCustomAnimations(R.anim.nav_default_enter_anim,R.anim.nav_default_exit_anim)
+                    setCustomAnimations(R.anim.nav_default_enter_anim, R.anim.nav_default_exit_anim)
                     replace(
                         R.id.movie_fragment_content,
                         detailFragment,
@@ -237,76 +234,6 @@ class MovieFragment(
         }
     }
 
-    private fun handleAdminButtonClick(position: Int) {
-//        val movieItem: Movie = mMovieList[position]
-//        val dialogBuilder2 = AlertDialog.Builder(context)
-//        df.document(movieItem.id.toString()).get().addOnSuccessListener {
-//            //If it exists that means the admin wants to delete it from the black list
-//            if (it.exists()) {
-//                dialogBuilder2.setCancelable(true)
-//                dialogBuilder2.setTitle("Confirmation")
-//                dialogBuilder2.setMessage("Are you sure you want to remove this movie from the black list?")
-//                dialogBuilder2.setPositiveButton("Ok") { currentDialog, _ ->
-//                    df.document(movieItem.id.toString()).delete().addOnSuccessListener {
-//                        Toast.makeText(
-//                            context,
-//                            "Removed successfully, showing this to users :>",
-//                            Toast.LENGTH_SHORT
-//                        ).show()
-//                        currentDialog.dismiss()
-//                    }.addOnFailureListener {
-//                        Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
-//                        currentDialog.dismiss()
-//                    }
-//                }
-//                dialogBuilder2.setNegativeButton("Cancel") { currentDialog, _ ->
-//                    currentDialog.dismiss()
-//                }
-//                val dialog = dialogBuilder2.create()
-//                dialog.window?.attributes?.dimAmount =
-//                    0.9f // Set this value between 0.0f and 1.0f to control the darkness
-//                dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-//                dialog.show()
-//            } else {
-//                //Not exist? that means the admin is adding it to the blacklist so no user can see it
-//                val blacklistItem = hashMapOf(
-//                    "id" to movieItem.id,
-//                    "title" to movieItem.title,
-//                    "poster_path" to movieItem.posterPath,
-//                    "overview" to movieItem.overview,
-//                    "vote_average" to movieItem.voteAverage,
-//                    "release_date" to movieItem.releaseDate,
-//                    "genre_ids" to movieItem.genreIds,
-//                )
-//                dialogBuilder2.setCancelable(true)
-//                dialogBuilder2.setTitle("Confirmation")
-//                dialogBuilder2.setMessage("Are you sure you want to add this movie to the black list?")
-//                dialogBuilder2.setPositiveButton("Ok") { currentDialog, _ ->
-//                    df.document(movieItem.id.toString()).set(blacklistItem).addOnSuccessListener {
-//                        Toast.makeText(
-//                            context,
-//                            "Added to the black list successfully, not showing this to users :>",
-//                            Toast.LENGTH_SHORT
-//                        ).show()
-//                        currentDialog.dismiss()
-//                    }.addOnFailureListener {
-//                        Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
-//                        currentDialog.dismiss()
-//                    }
-//                }
-//                dialogBuilder2.setNegativeButton("Cancel") { currentDialog, _ ->
-//                    currentDialog.dismiss()
-//                }
-//                val dialog = dialogBuilder2.create()
-//                dialog.window?.attributes?.dimAmount =
-//                    0.9f // Set this value between 0.0f and 1.0f to control the darkness
-//                dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-//                dialog.show()
-//
-//            }
-//        }
-
-    }
 
     private fun updateMovieList() {
         mCurrentPage = 1
@@ -435,24 +362,7 @@ class MovieFragment(
                 if (!isLoadMore) {
                     mMovieList.clear()
                 }
-//                if(isAdmin == "1") {
-////                    If the admin logged in, display all of the movies as usual
-                    mMovieList.addAll(movieResultList)
-//                } else {
-//                    val adminBlackList =
-//                        fStore.collection("Users").document(Constant.FIREBASE_ADMIN_ID)
-//                            .collection("Black List")
-//                    adminBlackList.get().addOnSuccessListener { querySnapshot ->
-//                        if (querySnapshot.isEmpty) {
-//                            mMovieList.addAll(movieResultList)
-//                        } else {
-//                            val blackListIds = querySnapshot.documents.mapNotNull { it.id.toInt() }
-//                            Log.d("Black list ids", blackListIds.toString())
-//                            movieResultList.removeAll { blackListIds.contains(it.id) }
-//                            mMovieList.addAll(movieResultList)
-//                        }
-//                    }
-//                }
+                mMovieList.addAll(movieResultList)
                 mMovieAdapter.setupMovieFavorite(mMovieListDB)
 
                 //Ignore the setting when searching

@@ -211,7 +211,7 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
     }
 
     override fun onDetach() {
-        mToolbarTitleListener.onUpdateToolbarTitle(previousFragmentName?: "Movie")
+        mToolbarTitleListener.onUpdateToolbarTitle(previousFragmentName ?: "Movie")
         super.onDetach()
     }
 
@@ -362,7 +362,11 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
                 mMovie.reminderTime = reminderTimeInMillis.toString()
                 val currentTimeMillis = Calendar.getInstance().timeInMillis
                 if (reminderTimeInMillis < currentTimeMillis) {
-                    Toast.makeText(context, "Please select a future date and time", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        "Please select a future date and time",
+                        Toast.LENGTH_SHORT
+                    ).show()
                     return@TimePickerDialog
                 }
 
@@ -383,7 +387,12 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
 
                     if (reminderEt.text.trim().isNotEmpty()) {
                         if (mReminderExisted) {
-                            if (mDatabaseOpenHelper.updateReminder(mMovie, userId, reminderEt.text.toString()) > 0) {
+                            if (mDatabaseOpenHelper.updateReminder(
+                                    mMovie,
+                                    userId,
+                                    reminderEt.text.toString()
+                                ) > 0
+                            ) {
                                 //Adding to the fireStore
                                 val reminderItem = hashMapOf(
                                     "id" to mMovie.id,
@@ -416,7 +425,12 @@ class DetailFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Frag
                                     .show()
                             }
                         } else {
-                            if (mDatabaseOpenHelper.addReminder(mMovie, userId, reminderEt.text.toString()) > 0) {
+                            if (mDatabaseOpenHelper.addReminder(
+                                    mMovie,
+                                    userId,
+                                    reminderEt.text.toString()
+                                ) > 0
+                            ) {
                                 mReminderExisted = true
                                 mReminderListener.onLoadReminder()
                                 val reminderItem = hashMapOf(

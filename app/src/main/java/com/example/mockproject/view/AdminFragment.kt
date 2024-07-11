@@ -48,19 +48,7 @@ class AdminFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
     ): View? {
         // Inflate the layout for this fragment
         setHasOptionsMenu(true)
-        return inflater.inflate(R.layout.fragment_admin, container, false)
-    }
 
-    override fun onPrepareOptionsMenu(menu: Menu) {
-        val item = menu.findItem(R.id.change_view)
-        val item2 = menu.findItem(R.id.action_search)
-        item.isVisible = false
-        item2.isVisible = false
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        //Get the account from the firestore
         fStore.collection("Users")
             .whereEqualTo("isAdmin", "0") //Only displaying users apart from admin
             .get()
@@ -92,6 +80,21 @@ class AdminFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
                     )
                 }
             }
+
+        return inflater.inflate(R.layout.fragment_admin, container, false)
+    }
+
+    override fun onPrepareOptionsMenu(menu: Menu) {
+        val item = menu.findItem(R.id.change_view)
+        val item2 = menu.findItem(R.id.action_search)
+        item.isVisible = false
+        item2.isVisible = false
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        //Get the account from the firestore
+
         mAccountRecyclerView = view.findViewById(R.id.frg_admin_recyclerview)
         mAccountAdapter = AccountAdapter(accountList = accountList, this)
         mAccountRecyclerView.adapter = mAccountAdapter

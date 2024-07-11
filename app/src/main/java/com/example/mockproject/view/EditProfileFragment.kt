@@ -1,9 +1,11 @@
 package com.example.mockproject.view
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.app.DatePickerDialog
 import android.content.Intent
 import android.graphics.Bitmap
+import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.view.LayoutInflater
@@ -19,6 +21,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresExtension
 import androidx.fragment.app.Fragment
 import com.example.mockproject.R
 import com.example.mockproject.constant.Constant
@@ -26,8 +29,6 @@ import com.example.mockproject.constant.Constant.Companion.PROFILE_AVATAR_KEY
 import com.example.mockproject.listenercallback.ProfileListener
 import com.example.mockproject.listenercallback.ToolbarTitleListener
 import com.example.mockproject.util.BitmapConverter
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
 import java.util.Calendar
 
 class EditProfileFragment : Fragment() {
@@ -50,6 +51,18 @@ class EditProfileFragment : Fragment() {
                 mAvatarImg.setImageBitmap(imageBitmap)
             }
         }
+
+    private val mGalleryResultLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            if (it.resultCode == Activity.RESULT_OK) {
+                val intent = it.data
+                val imageUri = intent?.data
+                mProfileBitmap =
+                    MediaStore.Images.Media.getBitmap(activity?.contentResolver, imageUri)
+                mAvatarImg.setImageBitmap(mProfileBitmap)
+            }
+        }
+
     private var mProfileBitmap: Bitmap? = null
     private var mIsMale: Boolean = false
 
@@ -151,9 +164,21 @@ class EditProfileFragment : Fragment() {
 
     //Capture an avatar on camera
     private fun pickAvatar() {
-        val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-        mCameraResultLauncher.launch(cameraIntent)
+        AlertDialog.Builder(activity)
+            .setTitle(R.string.avatar_title)
+            .setMessage(R.string.avatar_message)
+            .setPositiveButton(R.string.positive_choice) { _, _ ->
+                val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+                mCameraResultLauncher.launch(cameraIntent)
+            }
+            .setNegativeButton(R.string.negative_choice) { _, _ ->
+                val galleryIntent = Intent(Intent.ACTION_PICK,MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+                mGalleryResultLauncher.launch(galleryIntent)
+            }.show()
+
     }
+
+
 
     private fun pickDateOfBirth() {
         val currentDateTime = Calendar.getInstance()

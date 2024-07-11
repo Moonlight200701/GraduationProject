@@ -89,7 +89,10 @@ class ChangePasswordFragment : Fragment() {
         }
 
         mCancelChangingPassword.setOnClickListener{
-            requireActivity().supportFragmentManager.popBackStack()
+            requireActivity().supportFragmentManager.beginTransaction()
+                .setCustomAnimations(R.anim.nav_default_enter_anim, R.anim.nav_default_exit_anim)
+                .remove(this)
+                .commit()
         }
         return view
 

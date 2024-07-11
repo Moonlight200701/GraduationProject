@@ -39,9 +39,9 @@ class AccountAdapter(
             accountName.text = account.userName
             accountEmail.text = account.email
             accountStatus.text = "Status: ${account.status}"
-            if(account.avatar == "null"){
-
+            if(account.avatar == "null" || account.avatar == ""){
                 Log.d("No avatar", "Dude doesn't like selfie :|")
+                accountAvatar.setImageResource(R.drawable.admin_avatar)
             } else {
                 accountAvatar.setImageBitmap(
                     BitmapConverter().decodeBase64(

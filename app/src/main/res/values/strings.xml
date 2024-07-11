@@ -62,4 +62,8 @@
     <string name="please_verify_your_email">Please verify your email:</string>
     <string name="search_by_name">Search by name</string>
     <string name="welcome_back">Welcome Back!\n</string>
+    <string name="avatar_title">Choose avatar</string>
+    <string name="avatar_message">Do you want to use the camera for the avatar?</string>
+    <string name="positive_choice">Yes</string>
+    <string name="negative_choice">No, use image from gallery</string>
 </resources>
