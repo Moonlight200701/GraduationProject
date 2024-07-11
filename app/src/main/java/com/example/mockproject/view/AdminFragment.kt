@@ -27,6 +27,10 @@ import com.example.mockproject.database.DatabaseOpenHelper
 import com.example.mockproject.model.Account
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.firestore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 //Purpose of database param? delete the movie in the local as well if i want to delete the user
 class AdminFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragment(),
@@ -49,38 +53,6 @@ class AdminFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
         // Inflate the layout for this fragment
         setHasOptionsMenu(true)
 
-        fStore.collection("Users")
-            .whereEqualTo("isAdmin", "0") //Only displaying users apart from admin
-            .get()
-            .addOnSuccessListener { result ->
-                for (document in result) {
-                    val id = document.id
-                    val email = document.getString("Email") ?: "Unknown"
-                    val fullName = document.getString("FullName") ?: "Unknown"
-                    val birthday = document.getString("Birthday") ?: "Unknown"
-                    val gender = document.getString("Gender") ?: "Unknown"
-                    val status = document.getString("Status") ?: "Unknown"
-                    val createdTime = document.getString("CreatedTime") ?: "Unknown"
-                    val lastLoginTime = document.getString("Last Login time") ?: "Unknown"
-                    val marked = document.getBoolean("Marked") ?: false
-                    val avatar = document.getString("Avatar") ?: ""
-                    accountList.add(
-                        Account(
-                            id,
-                            fullName,
-                            email,
-                            birthday,
-                            gender,
-                            status,
-                            createdTime,
-                            lastLoginTime,
-                            marked,
-                            avatar
-                        )
-                    )
-                }
-            }
-
         return inflater.inflate(R.layout.fragment_admin, container, false)
     }
 
@@ -94,10 +66,44 @@ class AdminFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         //Get the account from the firestore
-
-        mAccountRecyclerView = view.findViewById(R.id.frg_admin_recyclerview)
-        mAccountAdapter = AccountAdapter(accountList = accountList, this)
-        mAccountRecyclerView.adapter = mAccountAdapter
+        CoroutineScope(Dispatchers.IO).launch {
+            fStore.collection("Users")
+                .whereEqualTo("isAdmin", "0") //Only displaying users apart from admin
+                .get()
+                .addOnSuccessListener { result ->
+                    for (document in result) {
+                        val id = document.id
+                        val email = document.getString("Email") ?: "Unknown"
+                        val fullName = document.getString("FullName") ?: "Unknown"
+                        val birthday = document.getString("Birthday") ?: "Unknown"
+                        val gender = document.getString("Gender") ?: "Unknown"
+                        val status = document.getString("Status") ?: "Unknown"
+                        val createdTime = document.getString("CreatedTime") ?: "Unknown"
+                        val lastLoginTime = document.getString("Last Login time") ?: "Unknown"
+                        val marked = document.getBoolean("Marked") ?: false
+                        val avatar = document.getString("Avatar") ?: ""
+                        accountList.add(
+                            Account(
+                                id,
+                                fullName,
+                                email,
+                                birthday,
+                                gender,
+                                status,
+                                createdTime,
+                                lastLoginTime,
+                                marked,
+                                avatar
+                            )
+                        )
+                    }
+                }
+            withContext(Dispatchers.Main) {
+                mAccountRecyclerView = view.findViewById(R.id.frg_admin_recyclerview)
+                mAccountAdapter = AccountAdapter(accountList = accountList, this@AdminFragment)
+                mAccountRecyclerView.adapter = mAccountAdapter
+            }
+        }
 
         //Search Button
         searchEt = view.findViewById(R.id.frg_admin_search_text)

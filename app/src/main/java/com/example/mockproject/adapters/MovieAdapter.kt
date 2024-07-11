@@ -63,7 +63,7 @@ class MovieAdapter(
 
         if (convertYear != null) {
             movieList.removeAll {
-                if(it.releaseDate.length > 4) it.releaseDate.substring(0, 4).trim() != releaseYear else it.releaseDate != releaseYear
+                if(it.releaseDate.length > 4) it.releaseDate.substring(0, 4).trim().toInt() < convertYear else it.releaseDate != releaseYear
 
             }
         }

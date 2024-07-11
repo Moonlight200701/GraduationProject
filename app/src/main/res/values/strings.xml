@@ -51,7 +51,7 @@
     <string name="terminate_account">Terminate Account</string>
     <string name="example_gender">Gender: Male</string>
     <string name="example_birthday">Birthday: 20/07/2001</string>
-    <string name="example_time_created">Time Created: 2024-12-02 23:03:04</string>
+    <string name="example_time_created">Time Created: 2024–12–02 23:03:04</string>
     <string name="example_time_lastLogin">Last login time: 2024-12-01 23:03:04</string>
     <string name="dialog_question"><![CDATA[Where to watch :>]]></string>
     <string name="cancel_btn">Cancel</string>
@@ -66,4 +66,5 @@
     <string name="avatar_message">Do you want to use the camera for the avatar?</string>
     <string name="positive_choice">Yes</string>
     <string name="negative_choice">No, use image from gallery</string>
+    <string name="message_if_the_favorite_list_Empty">Make your watch list and I will do the rest :>\n (Next time you log in)</string>
 </resources>

@@ -22,7 +22,6 @@ class ChangePasswordFragment : Fragment() {
     private lateinit var mChangePwdButton: Button
     private lateinit var mCancelChangingPassword: Button
     private var user = FirebaseAuth.getInstance().currentUser
-    private var fStore = FirebaseFirestore.getInstance().collection("Users").document(user!!.uid)
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,

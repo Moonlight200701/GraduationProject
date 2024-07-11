@@ -9,6 +9,7 @@ import android.view.Menu
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ProgressBar
+import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -65,6 +66,7 @@ class AboutFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
     private lateinit var mRecommendationList: RecyclerView
     private lateinit var mMovieRecommendationAdapter: RecommendationAdapter
     private lateinit var mLoadingIcon: ProgressBar
+    private lateinit var mMessageTextView: TextView
 
     private lateinit var mToolbarTitleListener: ToolbarTitleListener
     private lateinit var mBadgeListener: BadgeListener
@@ -111,6 +113,7 @@ class AboutFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         mRecommendationList = view.findViewById(R.id.list_recyclerview_recommend)
+        mMessageTextView = view.findViewById(R.id.messageIfEmpty)
 //        val mMovieFavoriteData = arguments?.getSerializable("My favorite list") as? ArrayList<*>
 //        Log.d("Movie From Favorite", mMovieFavorite.toString())
 
@@ -411,6 +414,7 @@ class AboutFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
             if (movieList.isNotEmpty() && movieFavoriteList.isNotEmpty()) {
                 mLoadingIcon.visibility = View.VISIBLE
                 mRecommendationList.visibility = View.INVISIBLE
+                Log.d("Empty or not", "Both of the list is not empty")
                 // Perform similarity calculation
                 mHandler.postDelayed({
                     getSimilarMovies(movieList, movieFavoriteList, 5)
@@ -420,6 +424,8 @@ class AboutFragment(private var mDatabaseOpenHelper: DatabaseOpenHelper) : Fragm
             } else {
                 // Log a message or handle the case where data is not fully loaded
                 Log.d("AboutFragment", "Movie data is not fully loaded yet")
+                mMessageTextView.visibility = View.VISIBLE
+                mLoadingIcon.visibility = View.GONE
             }
         }
     }
